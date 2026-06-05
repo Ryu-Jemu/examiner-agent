@@ -34,10 +34,23 @@ def adversarial_debate(state: FactCheckState) -> dict:
     loop = state.get("loop_count", 0)
 
     pairs: list[ArgumentPair] = []
+    skipped = 0
     for claim in claims:
         if not claim.checkable:
             continue
         ev = evidence_for_claim(pool, claim.claim_id)
+        # 비용 절감: 증거가 없으면 양측이 인용할 게 없으므로 LLM 호출을 건너뛴다
+        # (판사가 증거 0 → "불충분(판단 불가)"으로 처리). 빈 논거쌍만 남긴다.
+        if not ev:
+            skipped += 1
+            empty = SideArgument(summary="(인용할 증거 없음)", cited_snippet_ids=[])
+            pairs.append(
+                ArgumentPair(
+                    claim_id=claim.claim_id, loop=loop,
+                    prosecution=empty, defense=empty,
+                )
+            )
+            continue
         valid_ids = {e.snippet_id for e in ev}
         evidence_block = format_evidence_block(ev)
 
@@ -63,5 +76,7 @@ def adversarial_debate(state: FactCheckState) -> dict:
             )
         )
 
-    logger.info("적대적 논거 %d쌍 생성(loop=%d)", len(pairs), loop)
+    logger.info(
+        "적대적 논거 %d쌍 생성(loop=%d, 증거없음 %d건 LLM 생략)", len(pairs), loop, skipped
+    )
     return {"arguments": pairs}  # add 리듀서 → 누적

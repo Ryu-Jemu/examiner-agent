@@ -17,7 +17,7 @@ from ..llm import structured_invoke
 from ..models import (
     Claim,
     EvidenceItem,
-    RefutationList,
+    RefutationEntry,
     Verdict,
     VerdictLabel,
     VerdictList,
@@ -28,7 +28,6 @@ from .formatting import (
     format_arguments_block,
     format_claims_block,
     format_evidence_block,
-    format_verdicts_block,
 )
 
 logger = logging.getLogger("factchecker.nodes.judge")
@@ -93,7 +92,7 @@ def judge(state: FactCheckState) -> dict:
 
     checkable = [c for c in claims if c.checkable]
 
-    # --- 판정 ---
+    # --- 판정 + 자가 반박 (한 번의 LLM 호출로 동시 산출 → 비용 절약) ---
     if checkable:
         judge_prompt = prompts.render(
             "judge",
@@ -102,7 +101,9 @@ def judge(state: FactCheckState) -> dict:
             evidence_block=format_evidence_block(pool),
         )
         result = structured_invoke(
-            judge_prompt, VerdictList, default=VerdictList(verdicts=_default_verdicts(claims))
+            judge_prompt,
+            VerdictList,
+            default=VerdictList(verdicts=_default_verdicts(claims)),
         )
         verdicts = result.verdicts or _default_verdicts(claims)
         # 환각 가드: evidence_chain 은 실제 풀의 snippet_id 부분집합만 허용(검사/변호와 동일 방어).
@@ -115,27 +116,19 @@ def judge(state: FactCheckState) -> dict:
     else:
         verdicts = []
 
-    # --- 자가 반박(레드팀) ---
-    refutations = []
-    if verdicts:
-        refute_prompt = prompts.render(
-            "self_refute",
-            verdicts_block=format_verdicts_block(verdicts),
-            evidence_block=format_evidence_block(pool),
+    # 각 판정에 동봉된 자가 반박으로 refutation_log 구성 + 추가검색 유도.
+    refutations = [
+        RefutationEntry(
+            loop=loop,
+            claim_id=v.claim_id,
+            challenge=v.self_refutation,
+            survived=v.survives_refutation,
         )
-        refute_result = structured_invoke(
-            refute_prompt, RefutationList, default=RefutationList(refutations=[])
-        )
-        refutations = refute_result.refutations
-        # loop 값 정규화
-        for r in refutations:
-            r.loop = loop
-
-    # --- 자가 반박 결과를 루프 유도에 반영 ---
-    not_survived = {r.claim_id for r in refutations if not r.survived}
+        for v in verdicts
+    ]
     for v in verdicts:
         ev_count = len(evidence_for_claim(pool, v.claim_id))
-        if v.claim_id in not_survived and ev_count <= _THIN_EVIDENCE:
+        if (not v.survives_refutation) and ev_count <= _THIN_EVIDENCE:
             v.needs_more_evidence = True
 
     new_loop = loop + 1

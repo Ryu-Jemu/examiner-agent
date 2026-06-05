@@ -106,6 +106,13 @@ class Verdict(BaseModel):
         default_factory=list, description="결론 근거가 된 snippet_id 목록(순서대로)"
     )
     rationale: str = Field(default="", description="판정 근거 설명")
+    # 자가 반박(레드팀)을 판정과 같은 호출에서 함께 산출 → LLM 호출 1회 절약
+    self_refutation: str = Field(
+        default="", description="이 판정을 뒤집을 수 있는 가장 강한 반론(레드팀)"
+    )
+    survives_refutation: bool = Field(
+        default=True, description="위 반론에도 판정이 유지되면 true, 흔들리면 false"
+    )
     needs_more_evidence: bool = Field(
         default=False, description="증거 부족으로 추가 검색이 필요하면 true"
     )
@@ -118,16 +125,12 @@ class VerdictList(BaseModel):
 
 
 class RefutationEntry(BaseModel):
+    """자가 반박 기록. judge 가 각 판정의 self_refutation/survives_refutation 에서 구성."""
+
     loop: int
     claim_id: int
     challenge: str = Field(description="판정에 대한 가장 강한 반론(레드팀)")
     survived: bool = Field(description="반론에도 판정이 유지되면 true")
-
-
-class RefutationList(BaseModel):
-    """self-refute 단계의 구조화 출력."""
-
-    refutations: list[RefutationEntry] = Field(default_factory=list)
 
 
 class TechniqueTag(BaseModel):

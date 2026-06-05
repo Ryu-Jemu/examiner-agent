@@ -11,8 +11,6 @@ from factchecker.models import (
     ClaimType,
     EvidenceItem,
     RebuttalCard,
-    RefutationEntry,
-    RefutationList,
     SideArgument,
     SourceType,
     TechniqueTag,
@@ -153,25 +151,23 @@ def test_tag_techniques_corrects_library_id(monkeypatch):
     assert out["technique_tags"][0].library_entry_id == "tech_emotion"
 
 
-def _schema_aware_judge_si(verdict, refute):
+def _judge_si(verdicts):
+    """판사 단일 호출(VerdictList)을 모킹. 자가 반박은 verdict 필드에 동봉됨."""
     def fake_si(prompt, schema, *, default, temperature=None):
         if schema is VerdictList:
-            return VerdictList(verdicts=[verdict])
-        if schema is RefutationList:
-            return RefutationList(refutations=[refute])
+            return VerdictList(verdicts=verdicts)
         return default
     return fake_si
 
 
 def test_judge_escalates_needs_more_on_failed_refutation(monkeypatch):
-    """자가 반박 미생존 + 증거 빈약 → needs_more_evidence=True → 루프."""
+    """자가 반박 미생존(survives_refutation=False) + 증거 빈약 → needs_more_evidence=True → 루프."""
     mod = importlib.import_module("factchecker.nodes.judge")
     verdict = Verdict(
         claim_id=0, label=VerdictLabel.INSUFFICIENT, confidence=0.3,
-        evidence_chain=["ev1"], needs_more_evidence=False,
+        evidence_chain=["ev1"], self_refutation="반론", survives_refutation=False,
     )
-    refute = RefutationEntry(loop=0, claim_id=0, challenge="반론", survived=False)
-    monkeypatch.setattr(mod, "structured_invoke", _schema_aware_judge_si(verdict, refute))
+    monkeypatch.setattr(mod, "structured_invoke", _judge_si([verdict]))
     claims = [Claim(claim_id=0, text="주장", claim_type=ClaimType.FACT, checkable=True)]
     pool = [EvidenceItem(claim_id=0, snippet_id="ev1", snippet="x", source="s")]  # 1건=빈약
     out = mod.judge(
@@ -180,6 +176,9 @@ def test_judge_escalates_needs_more_on_failed_refutation(monkeypatch):
     )
     assert out["verdicts"][0].needs_more_evidence is True
     assert out["route_decision"] == "retrieve_evidence"
+    # refutation_log 가 verdict 의 자가 반박에서 파생되는지 확인
+    assert out["refutation_log"][0].survived is False
+    assert out["refutation_log"][0].challenge == "반론"
 
 
 def test_judge_no_escalation_when_evidence_sufficient(monkeypatch):
@@ -187,10 +186,9 @@ def test_judge_no_escalation_when_evidence_sufficient(monkeypatch):
     mod = importlib.import_module("factchecker.nodes.judge")
     verdict = Verdict(
         claim_id=0, label=VerdictLabel.MOSTLY_TRUE, confidence=0.8,
-        evidence_chain=["ev1", "ev2"], needs_more_evidence=False,
+        evidence_chain=["ev1", "ev2"], survives_refutation=False,
     )
-    refute = RefutationEntry(loop=0, claim_id=0, challenge="반론", survived=False)
-    monkeypatch.setattr(mod, "structured_invoke", _schema_aware_judge_si(verdict, refute))
+    monkeypatch.setattr(mod, "structured_invoke", _judge_si([verdict]))
     claims = [Claim(claim_id=0, text="주장", claim_type=ClaimType.FACT, checkable=True)]
     pool = [
         EvidenceItem(claim_id=0, snippet_id="ev1", snippet="x", source="s"),
@@ -209,10 +207,9 @@ def test_judge_filters_hallucinated_evidence_chain(monkeypatch):
     mod = importlib.import_module("factchecker.nodes.judge")
     verdict = Verdict(
         claim_id=0, label=VerdictLabel.FALSE, confidence=0.9,
-        evidence_chain=["ev1", "FAKE"], needs_more_evidence=False,
+        evidence_chain=["ev1", "FAKE"], survives_refutation=True,
     )
-    refute = RefutationEntry(loop=0, claim_id=0, challenge="r", survived=True)
-    monkeypatch.setattr(mod, "structured_invoke", _schema_aware_judge_si(verdict, refute))
+    monkeypatch.setattr(mod, "structured_invoke", _judge_si([verdict]))
     claims = [Claim(claim_id=0, text="주장", claim_type=ClaimType.FACT, checkable=True)]
     pool = [EvidenceItem(claim_id=0, snippet_id="ev1", snippet="x", source="s")]
     out = mod.judge(

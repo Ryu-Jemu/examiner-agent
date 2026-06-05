@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from ..models import ArgumentPair, Claim, EvidenceItem, Verdict
+from ..models import ArgumentPair, Claim, EvidenceItem
 
 
 def format_evidence_block(items: list[EvidenceItem]) -> str:
@@ -36,19 +36,6 @@ def format_arguments_block(arguments: list[ArgumentPair]) -> str:
             f"[claim_id={ap.claim_id} | loop={ap.loop}]\n"
             f"  검사: {ap.prosecution.summary} (인용: {pro_ids})\n"
             f"  변호: {ap.defense.summary} (인용: {def_ids})"
-        )
-    return "\n".join(lines)
-
-
-def format_verdicts_block(verdicts: list[Verdict]) -> str:
-    if not verdicts:
-        return "(판정이 없습니다)"
-    lines = []
-    for v in verdicts:
-        chain = ", ".join(v.evidence_chain) or "없음"
-        lines.append(
-            f"- claim_id={v.claim_id} | 판정={v.label.value} "
-            f"| 신뢰도={v.confidence:.2f} | 근거사슬=[{chain}]\n  근거: {v.rationale}"
         )
     return "\n".join(lines)
 

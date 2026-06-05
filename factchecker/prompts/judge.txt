@@ -18,6 +18,11 @@
 - 증거가 부족해 추가 검색이 필요하면 needs_more_evidence=true 로 표시하세요.
 - confidence 는 0.0~1.0 사이의 실수입니다.
 
+[자가 반박(레드팀) — 각 판정마다 함께 작성]
+- self_refutation: 당신의 판정을 뒤집을 수 있는 가장 강한 반론을 한두 문장으로 적으세요.
+- survives_refutation: 제공된 증거를 고려할 때 그 반론에도 판정이 유지되면 true, 흔들리면
+  false 로 적으세요. 반론이 강하고 증거가 부족하면 정직하게 false 로 두세요.
+
 [주장 목록]
 {claims_block}
 

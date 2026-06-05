@@ -12,14 +12,14 @@ import pytest
 @pytest.fixture(autouse=True)
 def _env(tmp_path, monkeypatch):
     """모든 테스트에 깨끗한 설정 환경을 주입한다."""
-    monkeypatch.setenv("LLM_PROVIDER", "anthropic")
-    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-anthropic-key-not-real")
-    monkeypatch.setenv("GOOGLE_API_KEY", "test-key-not-real")
+    monkeypatch.setenv("LLM_API_KEY", "test-llm-key-not-real")
+    monkeypatch.setenv("LLM_MODEL", "test-model")
+    monkeypatch.setenv("GOOGLE_API_KEY", "test-key-not-real")  # 임베딩용
     monkeypatch.setenv("SEARCH_BACKEND", "local")
     monkeypatch.setenv("EMBEDDING_BACKEND", "gemini")
     monkeypatch.setenv("CHROMA_DIR", str(tmp_path / ".chroma"))
     monkeypatch.setenv("MAX_LOOPS", "2")
-    monkeypatch.setenv("RETRIEVE_K", "4")
+    monkeypatch.setenv("RETRIEVE_K", "3")
 
     from factchecker.config import reset_settings
 
