@@ -1,0 +1,258 @@
+[
+  {
+    "id": "ev_vaccine_magnet_01",
+    "text": "코로나19 백신의 성분은 mRNA 또는 바이러스 벡터, 지질, 염류, 당류 등으로 구성되며 자성을 띠는 금속이나 마이크로칩은 포함되지 않는다.",
+    "source": "보건·의학 일반 정보 요약",
+    "source_type": "정부·공공",
+    "url": null,
+    "date": "2021"
+  },
+  {
+    "id": "ev_vaccine_magnet_02",
+    "text": "피부에 동전이나 자석이 잠시 붙는 현상은 피지·땀·표면장력에 의한 것으로, 접종 여부와 무관하게 누구에게나 나타날 수 있다.",
+    "source": "과학 상식 정리",
+    "source_type": "학술",
+    "url": null,
+    "date": "2021"
+  },
+  {
+    "id": "ev_vaccine_magnet_03",
+    "text": "여러 보건 당국과 과학자들은 '백신을 맞으면 몸에 자석이 붙는다'는 주장이 근거가 없다고 반복적으로 설명했다.",
+    "source": "팩트체크 정리",
+    "source_type": "뉴스",
+    "url": null,
+    "date": "2021"
+  },
+  {
+    "id": "ev_vaccine_magnet_rumor",
+    "text": "한 단톡방 메시지는 '지인이 접종 후 팔에 숟가락이 붙었다'고 주장했으나 출처나 검증된 근거는 제시하지 않았다.",
+    "source": "출처 불명 메시지",
+    "source_type": "출처불명",
+    "url": null,
+    "date": null
+  },
+  {
+    "id": "ev_flat_earth_01",
+    "text": "지구는 적도가 약간 부푼 회전타원체이며, 인공위성 사진·세계 일주·항법 데이터 등 다양한 독립 증거가 둥근 지구를 뒷받침한다.",
+    "source": "과학 교과 일반 사실",
+    "source_type": "학술",
+    "url": null,
+    "date": null
+  },
+  {
+    "id": "ev_flat_earth_02",
+    "text": "수평선 너머로 배가 아래에서부터 사라지는 현상, 위도별 별자리 차이, 월식 때 지구 그림자의 곡률 등은 평평한 지구로는 설명되지 않는다.",
+    "source": "천문·과학 상식",
+    "source_type": "학술",
+    "url": null,
+    "date": null
+  },
+  {
+    "id": "ev_water8_01",
+    "text": "'하루 물 8잔'은 널리 퍼진 권고이지만 정확히 8잔을 마셔야 한다는 과학적 근거는 분명하지 않으며, 필요한 수분량은 체중·활동량·기후·식사에 따라 달라진다.",
+    "source": "영양·건강 일반 정보",
+    "source_type": "기관",
+    "url": null,
+    "date": null
+  },
+  {
+    "id": "ev_water8_02",
+    "text": "음식과 다른 음료에 포함된 수분도 하루 수분 섭취에 포함되므로, 갈증과 소변 색 등 신체 신호에 따라 마시는 것이 일반적으로 권장된다.",
+    "source": "영양 일반 정보",
+    "source_type": "기관",
+    "url": null,
+    "date": null
+  },
+  {
+    "id": "ev_water8_03",
+    "text": "적절한 수분 섭취가 건강에 중요하다는 점 자체는 사실이며, 무더위·운동 시에는 수분 보충이 특히 권장된다.",
+    "source": "보건 일반 정보",
+    "source_type": "정부·공공",
+    "url": null,
+    "date": null
+  },
+  {
+    "id": "ev_microwave_plant_01",
+    "text": "전자레인지로 데운 물을 실온으로 식히면 화학적으로 일반 물과 동일하며, 식물에 해를 준다는 통제된 과학적 근거는 없다.",
+    "source": "과학 상식 정리",
+    "source_type": "학술",
+    "url": null,
+    "date": null
+  },
+  {
+    "id": "ev_microwave_plant_02",
+    "text": "전자레인지는 물 분자를 진동시켜 가열할 뿐 물의 화학 구조를 영구적으로 바꾸지 않는다.",
+    "source": "물리·과학 일반 사실",
+    "source_type": "학술",
+    "url": null,
+    "date": null
+  },
+  {
+    "id": "ev_msg_01",
+    "text": "글루탐산나트륨(MSG)은 여러 식품안전 기관에서 일반적인 섭취 수준에서 안전한 식품첨가물로 평가되어 왔다.",
+    "source": "식품안전 일반 정보",
+    "source_type": "정부·공공",
+    "url": null,
+    "date": null
+  },
+  {
+    "id": "ev_msg_02",
+    "text": "이른바 '중국 음식점 증후군'은 잘 통제된 연구들에서 MSG와의 일관된 인과관계가 확인되지 않았다.",
+    "source": "의학·영양 연구 정리",
+    "source_type": "학술",
+    "url": null,
+    "date": null
+  },
+  {
+    "id": "ev_msg_03",
+    "text": "일부 사람은 다량 섭취 시 일시적 불편감을 보고하기도 하지만, 이는 보편적 독성과는 다른 문제로 다뤄진다.",
+    "source": "영양 일반 정보",
+    "source_type": "기관",
+    "url": null,
+    "date": null
+  },
+  {
+    "id": "ev_vitc_01",
+    "text": "비타민C 보충제가 일반 인구에서 감기를 예방한다는 근거는 뚜렷하지 않으며, 규칙적 복용이 감기 발생 자체를 막는다는 결론은 지지되지 않는다.",
+    "source": "의학 연구 정리",
+    "source_type": "학술",
+    "url": null,
+    "date": null
+  },
+  {
+    "id": "ev_vitc_02",
+    "text": "일부 연구에서는 규칙적 비타민C 섭취가 감기의 '지속 기간'을 약간 줄일 수 있다고 보고하지만, 고용량 메가도스의 예방 효과는 입증되지 않았다.",
+    "source": "의학 연구 정리",
+    "source_type": "학술",
+    "url": null,
+    "date": null
+  },
+  {
+    "id": "ev_tapwater_01",
+    "text": "한국의 수돗물은 법정 먹는물 수질 기준에 따라 관리되며, 기준을 충족하면 끓이지 않고도 마실 수 있도록 공급된다.",
+    "source": "상수도 일반 안내",
+    "source_type": "정부·공공",
+    "url": null,
+    "date": null
+  },
+  {
+    "id": "ev_tapwater_02",
+    "text": "많은 가정이 맛이나 노후 배관에 대한 우려로 물을 끓이거나 정수해 마시지만, 이는 기준 미달을 의미하기보다 선호의 문제인 경우가 많다.",
+    "source": "생활 환경 일반 정보",
+    "source_type": "기관",
+    "url": null,
+    "date": null
+  },
+  {
+    "id": "ev_fandeath_01",
+    "text": "밀폐된 방에서 선풍기를 켜고 자면 사망한다는 이른바 '선풍기 사망설'은 과학적 근거가 확인되지 않은 도시전설로 평가된다.",
+    "source": "과학 상식 정리",
+    "source_type": "학술",
+    "url": null,
+    "date": null
+  },
+  {
+    "id": "ev_fandeath_02",
+    "text": "선풍기 바람 자체가 체온을 치명적으로 떨어뜨리거나 산소를 고갈시킨다는 주장은 통제된 근거로 뒷받침되지 않는다.",
+    "source": "보건 일반 정보",
+    "source_type": "기관",
+    "url": null,
+    "date": null
+  },
+  {
+    "id": "ev_lightning_01",
+    "text": "'번개는 같은 곳에 두 번 치지 않는다'는 속설과 달리, 높은 건물이나 피뢰침에는 번개가 같은 지점에 여러 번 칠 수 있다.",
+    "source": "기상·과학 상식",
+    "source_type": "학술",
+    "url": null,
+    "date": null
+  },
+  {
+    "id": "ev_lightning_02",
+    "text": "높은 구조물은 주변보다 번개를 자주 유도하므로 동일 지점 반복 낙뢰가 드물지 않다.",
+    "source": "기상 일반 정보",
+    "source_type": "정부·공공",
+    "url": null,
+    "date": null
+  },
+  {
+    "id": "ev_bat_01",
+    "text": "박쥐는 눈이 멀지 않았다. 많은 종이 시각을 가지고 있으며, 어둠 속 이동에는 반향정위(에코로케이션)를 보조적으로 사용한다.",
+    "source": "생물 일반 사실",
+    "source_type": "학술",
+    "url": null,
+    "date": null
+  },
+  {
+    "id": "ev_bat_02",
+    "text": "'박쥐처럼 눈이 멀었다'는 표현은 관용구일 뿐, 실제 박쥐의 시각 능력을 정확히 반영하지 않는다.",
+    "source": "생물 상식 정리",
+    "source_type": "기관",
+    "url": null,
+    "date": null
+  },
+  {
+    "id": "ev_brain10_01",
+    "text": "'인간은 뇌의 10%만 쓴다'는 주장은 신경과학적으로 근거가 없으며, 뇌 영상 연구는 다양한 활동에서 뇌의 거의 전 영역이 사용됨을 보여준다.",
+    "source": "신경과학 일반 사실",
+    "source_type": "학술",
+    "url": null,
+    "date": null
+  },
+  {
+    "id": "ev_brain10_02",
+    "text": "뇌의 특정 영역이 손상되면 기능 장애가 나타난다는 점은 '쓰지 않는 90%'가 존재한다는 주장과 모순된다.",
+    "source": "의학 일반 정보",
+    "source_type": "기관",
+    "url": null,
+    "date": null
+  },
+  {
+    "id": "ev_warming_01",
+    "text": "전 지구 평균 지표 기온은 산업화 이후 장기적으로 상승해 왔으며, 이는 다수의 독립적 관측과 과학계의 광범위한 합의로 뒷받침된다.",
+    "source": "기후과학 합의 정리",
+    "source_type": "학술",
+    "url": null,
+    "date": null
+  },
+  {
+    "id": "ev_warming_02",
+    "text": "여러 기상·과학 기관의 장기 관측 자료는 최근 수십 년간 지구 평균 기온 상승 추세를 일관되게 보여준다.",
+    "source": "기상·기후 관측 정리",
+    "source_type": "정부·공공",
+    "url": null,
+    "date": null
+  },
+  {
+    "id": "ev_warming_counter",
+    "text": "특정 해 특정 지역이 평년보다 추웠다는 단편적 사례가 전 지구 장기 온난화 추세를 부정하는 근거가 되지는 않는다.",
+    "source": "기후과학 일반 설명",
+    "source_type": "학술",
+    "url": null,
+    "date": null
+  },
+  {
+    "id": "ev_supplement_generic_01",
+    "text": "건강보조식품이 '면역력을 몇 퍼센트 올린다'는 식의 구체적 수치 주장은 일반적으로 잘 설계된 임상 근거가 있어야 검증할 수 있으며, 제품별로 근거 수준이 크게 다르다.",
+    "source": "식품·건강 일반 정보",
+    "source_type": "기관",
+    "url": null,
+    "date": null
+  },
+  {
+    "id": "ev_supplement_generic_02",
+    "text": "특정 신상 제품의 효능을 뒷받침하는 공개된 임상시험 자료가 없으면, 그 효과를 사실로 단정하기 어렵다.",
+    "source": "소비자 정보 일반 안내",
+    "source_type": "기관",
+    "url": null,
+    "date": null
+  },
+  {
+    "id": "ev_general_factcheck_note",
+    "text": "출처가 불명확하고 감정을 자극하며 공유를 재촉하는 메시지는 사실 여부를 별도로 확인할 필요가 있다.",
+    "source": "미디어 리터러시 일반 안내",
+    "source_type": "기관",
+    "url": null,
+    "date": null
+  }
+]

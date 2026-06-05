@@ -1,0 +1,98 @@
+[
+  {
+    "id": "t01_vaccine_magnet",
+    "input_text": "충격! 코로나 백신 맞으면 몸에 자석이 붙는대요. 제 지인도 팔에 숟가락이 딱 붙었다네요. 빨리 가족들한테도 알려주세요!",
+    "gold_label": "거짓·오도",
+    "gold_techniques": ["감정 자극", "가짜 전문가·권위"],
+    "reference_sources": ["보건당국의 백신 성분 안내", "팩트체크 정리"],
+    "note": "백신에는 자성 금속이 없음. 감정 자극+출처불명 권위."
+  },
+  {
+    "id": "t02_flat_earth",
+    "input_text": "사실 지구는 평평합니다. 우리가 둥글다고 배운 건 다 조작된 거예요.",
+    "gold_label": "거짓·오도",
+    "gold_techniques": [],
+    "reference_sources": ["과학 교과 일반 사실"],
+    "note": "지구는 회전타원체."
+  },
+  {
+    "id": "t03_water_8cups",
+    "input_text": "건강하려면 무조건 하루에 물 8잔을 정확히 마셔야 한다는 거 다들 알죠?",
+    "gold_label": "대체로 거짓",
+    "gold_techniques": [],
+    "reference_sources": ["영양·건강 일반 정보"],
+    "note": "정확히 8잔 규칙은 과학적 근거 약함. 수분 섭취 중요성 자체는 사실 → 혼합/대체로 거짓."
+  },
+  {
+    "id": "t04_microwave_plant",
+    "input_text": "전자레인지로 데운 물을 식물에 주면 식물이 죽는다는 실험 결과가 있대요. 무서워요.",
+    "gold_label": "거짓·오도",
+    "gold_techniques": ["감정 자극"],
+    "reference_sources": ["과학 상식 정리"],
+    "note": "식힌 물은 일반 물과 동일."
+  },
+  {
+    "id": "t05_msg_harmful",
+    "input_text": "MSG는 몸에 해로우니까 무조건 안 들어간 것만 골라 드세요. 안 그러면 큰일 납니다.",
+    "gold_label": "대체로 거짓",
+    "gold_techniques": ["감정 자극", "거짓 이분법"],
+    "reference_sources": ["식품안전 일반 정보"],
+    "note": "일반 섭취 수준에서 안전으로 평가."
+  },
+  {
+    "id": "t06_vitc_cold",
+    "input_text": "비타민C를 많이 먹으면 감기를 확실히 예방할 수 있습니다. 전문가들도 다 그렇게 말해요.",
+    "gold_label": "대체로 거짓",
+    "gold_techniques": ["가짜 전문가·권위"],
+    "reference_sources": ["의학 연구 정리"],
+    "note": "일반 인구 예방 효과 뚜렷하지 않음. 지속기간 약간 단축 보고는 있음 → 혼합/대체로 거짓."
+  },
+  {
+    "id": "t07_tapwater",
+    "input_text": "한국 수돗물은 절대 그냥 마시면 안 돼요. 무조건 끓여 드세요.",
+    "gold_label": "대체로 거짓",
+    "gold_techniques": ["거짓 이분법"],
+    "reference_sources": ["상수도 일반 안내"],
+    "note": "수돗물은 음용 기준 충족. 끓임은 선호 문제."
+  },
+  {
+    "id": "t08_fan_death",
+    "input_text": "밀폐된 방에서 선풍기 켜고 자면 죽을 수 있어요. 진짜 조심하세요!",
+    "gold_label": "거짓·오도",
+    "gold_techniques": ["감정 자극"],
+    "reference_sources": ["과학 상식 정리"],
+    "note": "선풍기 사망설은 근거 없는 도시전설."
+  },
+  {
+    "id": "t09_lightning_twice",
+    "input_text": "번개는 같은 장소에 절대 두 번 치지 않는대요.",
+    "gold_label": "거짓·오도",
+    "gold_techniques": [],
+    "reference_sources": ["기상·과학 상식"],
+    "note": "높은 구조물에 반복 낙뢰 가능."
+  },
+  {
+    "id": "t10_brain_10percent",
+    "input_text": "사람은 평생 뇌의 10%밖에 못 쓴다는 게 과학적 사실이라네요.",
+    "gold_label": "거짓·오도",
+    "gold_techniques": ["가짜 전문가·권위"],
+    "reference_sources": ["신경과학 일반 사실"],
+    "note": "뇌의 거의 전 영역 사용. 10%설은 근거 없음."
+  },
+  {
+    "id": "t11_global_warming",
+    "input_text": "산업화 이후 지구의 평균 기온이 장기적으로 상승해 왔다.",
+    "gold_label": "사실",
+    "gold_techniques": [],
+    "reference_sources": ["기후과학 합의 정리"],
+    "note": "과학계 광범위한 합의로 뒷받침되는 참인 주장."
+  },
+  {
+    "id": "t12_supplement_immunity",
+    "input_text": "이번에 새로 나온 OO 건강보조제가 면역력을 정확히 30% 올려준다고 합니다.",
+    "gold_label": "불충분(판단 불가)",
+    "gold_techniques": ["가짜 통계·체리피킹"],
+    "reference_sources": ["식품·건강 일반 정보"],
+    "note": "특정 신상 제품의 구체 수치 주장. 공개 임상 근거 없음 → 판단 불가."
+  }
+]
