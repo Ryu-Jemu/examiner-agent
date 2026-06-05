@@ -1,0 +1,53 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "factchecker"
+version = "0.1.0"
+description = "단톡방 루머 적대적 팩트체커 + 미디어 리터러시 코치 — LangGraph multi-agent adversarial fact-checker"
+readme = "README.md"
+requires-python = ">=3.11,<3.14"
+license = { text = "MIT" }
+authors = [{ name = "examiner-agent term project" }]
+dependencies = [
+    "langgraph>=0.2,<2.0",
+    "langchain>=0.3,<1.0",
+    "langchain-core>=0.3,<1.0",
+    "langchain-community>=0.3,<1.0",
+    "langchain-anthropic>=0.3,<0.4",
+    "langchain-google-genai>=2.0",
+    "langchain-chroma>=0.1",
+    "chromadb>=0.5",
+    "google-generativeai>=0.8",
+    "python-dotenv>=1.0",
+    "pydantic>=2.5",
+    "gradio>=4.0",
+]
+
+[project.optional-dependencies]
+web = ["ddgs>=6.0"]
+dev = ["pytest>=8.0"]
+
+[project.scripts]
+factcheck = "factchecker.cli_entry:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["factchecker*"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+filterwarnings = [
+    "ignore::pytest.PytestUnraisableExceptionWarning",
+    "ignore:.*allowed_objects.*:UserWarning",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+# 한국어 주석/프롬프트가 많아 E501(라인 길이)은 line-length=100 으로 관리
+ignore = ["E741"]
