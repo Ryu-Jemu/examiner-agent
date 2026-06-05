@@ -54,3 +54,7 @@ htmlcov/
 # --- Gradio ---
 .gradio/
 flagged/
+
+#--- External Docs ---
+project_contents.md
+*.pdf
