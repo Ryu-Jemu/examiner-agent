@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>단톡방 루머 적대적 팩트체커 · 데모</title>
+<style>
+  :root {
+    --bg: #0f1220; --bg2: #161a2e; --panel: #1c2138; --panel2: #232944;
+    --line: #2e3556; --txt: #e7ecf6; --muted: #9aa3c0; --accent: #6d8bff;
+    --accent2: #9a6dff;
+    --g-true: #2bb673; --g-mtrue: #7ac043; --g-insuf: #4b5474;
+    --g-mfalse: #f59e0b; --g-false: #ef4444;
+    --radius: 16px; --shadow: 0 10px 30px rgba(0,0,0,.35);
+    --font: -apple-system, BlinkMacSystemFont, "Segoe UI", "Apple SD Gothic Neo",
+            "Malgun Gothic", "Noto Sans KR", Roboto, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font-family: var(--font); color: var(--txt);
+    background: radial-gradient(1200px 600px at 70% -10%, #1d2348 0%, var(--bg) 55%) fixed;
+    line-height: 1.6; -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 28px 20px 60px; }
+  header.hero { text-align: center; padding: 34px 0 18px; }
+  .hero h1 { font-size: clamp(1.5rem, 3.4vw, 2.3rem); margin: 0 0 8px; letter-spacing: -0.5px; }
+  .hero .sub { color: var(--muted); max-width: 720px; margin: 0 auto; font-size: 1.02rem; }
+  .badges { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 16px; }
+  .badge {
+    font-size: .8rem; padding: 5px 12px; border-radius: 999px; border: 1px solid var(--line);
+    background: rgba(109,139,255,.10); color: #c7d2ff;
+  }
+  .card {
+    background: linear-gradient(180deg, var(--panel) 0%, var(--bg2) 100%);
+    border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow);
+    padding: 22px; margin: 18px 0;
+  }
+  .card h2 { margin: 0 0 14px; font-size: 1.15rem; display: flex; align-items: center; gap: 8px; }
+  label.fld { display: block; font-size: .85rem; color: var(--muted); margin-bottom: 8px; }
+  textarea {
+    width: 100%; min-height: 92px; resize: vertical; border-radius: 12px; padding: 14px;
+    background: #11142a; border: 1px solid var(--line); color: var(--txt); font: inherit;
+  }
+  textarea:focus { outline: 2px solid var(--accent); border-color: transparent; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 12px; }
+  button.run {
+    background: linear-gradient(90deg, var(--accent), var(--accent2)); color: #fff;
+    border: 0; padding: 12px 22px; border-radius: 12px; font-weight: 700; cursor: pointer;
+    font-size: 1rem; box-shadow: 0 6px 18px rgba(109,139,255,.35);
+  }
+  button.run:active { transform: translateY(1px); }
+  .chips { display: flex; gap: 8px; flex-wrap: wrap; }
+  .chip {
+    cursor: pointer; font-size: .85rem; padding: 7px 13px; border-radius: 999px;
+    border: 1px solid var(--line); background: var(--panel2); color: #cdd5f2;
+    transition: .15s;
+  }
+  .chip:hover { border-color: var(--accent); color: #fff; }
+  .ex-label { font-size: .85rem; color: var(--muted); margin: 16px 0 8px; }
+  .ex-label b { color: #cdd5f2; }
+  .runwrap { margin-top: 20px; }
+  button.run.wide { display: block; width: 100%; max-width: 560px; margin: 0 auto; }
+
+  /* pipeline */
+  .pipe { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; }
+  @media (max-width: 760px) { .pipe { grid-template-columns: repeat(2, 1fr); } }
+  .node {
+    position: relative; text-align: center; padding: 14px 8px; border-radius: 12px;
+    border: 1px solid var(--line); background: #141833; opacity: .45; transition: .35s;
+  }
+  .node .ico { font-size: 1.5rem; }
+  .node .nm { font-size: .82rem; margin-top: 6px; color: #cdd5f2; }
+  .node .role { font-size: .7rem; color: var(--muted); }
+  .node.active { opacity: 1; border-color: var(--accent); box-shadow: 0 0 0 2px rgba(109,139,255,.25); transform: translateY(-2px); }
+  .node.done { opacity: 1; border-color: var(--g-true); }
+  .loopnote { text-align:center; color: var(--muted); font-size:.8rem; margin-top:10px; }
+
+  /* result */
+  .gradewrap { display: flex; gap: 18px; align-items: center; flex-wrap: wrap; }
+  .gradebadge {
+    font-size: 1.25rem; font-weight: 800; padding: 12px 20px; border-radius: 14px; color: #fff;
+    box-shadow: var(--shadow);
+  }
+  .gauge { flex: 1; min-width: 220px; }
+  .meter { height: 12px; border-radius: 999px; background: #11142a; overflow: hidden; border: 1px solid var(--line); }
+  .meter > span { display: block; height: 100%; border-radius: 999px; }
+  .claim {
+    border: 1px solid var(--line); border-radius: 12px; padding: 14px; margin-top: 12px;
+    background: #14182f;
+  }
+  .claim .txt { font-weight: 600; }
+  .lbl { font-size: .78rem; font-weight: 700; padding: 3px 10px; border-radius: 999px; color: #fff; }
+  .srcs { font-size: .82rem; color: var(--muted); margin-top: 8px; }
+  .srcs b { color: #cdd5f2; font-weight: 600; }
+  .tag {
+    display: inline-block; margin: 4px 6px 0 0; font-size: .82rem; padding: 5px 11px;
+    border-radius: 999px; background: rgba(245,158,11,.14); border: 1px solid #6b4f1f; color: #ffd79a;
+  }
+  .tagev { color: var(--muted); font-size: .82rem; margin: 4px 0 0 2px; }
+  .rebut {
+    background: linear-gradient(180deg, #15233a, #11192c); border: 1px solid #2a4a6b;
+    border-left: 4px solid var(--accent); border-radius: 12px; padding: 16px; margin-top: 8px;
+    position: relative;
+  }
+  .copybtn {
+    position: absolute; top: 10px; right: 10px; font-size: .75rem; padding: 4px 10px;
+    border-radius: 8px; border: 1px solid var(--line); background: var(--panel2); color: #cdd5f2; cursor: pointer;
+  }
+  .mini { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px,1fr)); gap: 12px; }
+  .mini .box { border: 1px solid var(--line); border-radius: 12px; padding: 14px; background: #14182f; }
+  .mini .box .k { font-size: 1.4rem; font-weight: 800; }
+  .mini .box .v { font-size: .82rem; color: var(--muted); }
+  footer { text-align: center; color: var(--muted); font-size: .82rem; margin-top: 26px; }
+  code { background: #11142a; border: 1px solid var(--line); border-radius: 6px; padding: 1px 6px; }
+  .hidden { display: none; }
+  .arrow { text-align:center; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="hero">
+    <h1>🕵️ 단톡방 루머 적대적 팩트체커 + 미디어 리터러시 코치</h1>
+    <p class="sub">단톡방·SNS 루머를 받아 <b>검사·변호·판사</b>의 적대적 토론과 자가 반박을 거쳐
+      <b>신뢰도 등급 · 근거 사슬 · 조작 기법 · 반론 카드</b>를 돌려주는 코치형 에이전트.</p>
+    <div class="badges">
+      <span class="badge">LangGraph 6노드</span>
+      <span class="badge">멀티에이전트</span>
+      <span class="badge">RAG</span>
+      <span class="badge">자가 반박 루프</span>
+      <span class="badge">조작 기법 태깅</span>
+    </div>
+  </header>
+
+  <!-- 입력 -->
+  <section class="card">
+    <h2>🧪 검증 입력</h2>
+    <label class="fld" for="inp">검증할 루머·메시지를 입력하거나, 아래 예시를 선택하세요.</label>
+    <textarea id="inp" placeholder="예) 충격! 백신 맞으면 몸에 자석이 붙는대요. 빨리 공유하세요!"></textarea>
+    <div class="ex-label">📌 <b>예시 데이터</b> — 아래 항목은 미리 실행해 둔 예시 결과입니다(클릭하여 확인).</div>
+    <div class="chips" id="chips"></div>
+    <div class="runwrap"><button class="run wide" id="runBtn">🔍 검증 실행</button></div>
+  </section>
+
+  <!-- 파이프라인 -->
+  <section class="card hidden" id="pipeCard">
+    <h2>⚙️ 처리 파이프라인 (LangGraph)</h2>
+    <div class="pipe" id="pipe"></div>
+    <div class="loopnote">↺ 판사가 <b>증거 부족</b>으로 판단하면 <b>증거 검색</b>으로 되돌아가
+      재검증합니다(최대 루프·신뢰도 수렴 등 4종 종료 조건).</div>
+  </section>
+
+  <!-- 결과 -->
+  <section class="card hidden" id="resultCard">
+    <h2>📋 검증 결과</h2>
+    <div id="result"></div>
+  </section>
+
+  <!-- 핵심 특징 -->
+  <section class="card">
+    <h2>🛡️ 핵심 특징 · 안전 설계</h2>
+    <div class="mini">
+      <div class="box"><div class="k">5단계</div><div class="v">신뢰도 등급(사실 / 대체로 사실 / 불충분 / 대체로 거짓 / 거짓·오도)</div></div>
+      <div class="box"><div class="k">인용 가드</div><div class="v">검사·변호·판사의 인용을 실제 회수 스니펫으로 코드 강제(환각 차단)</div></div>
+      <div class="box"><div class="k">판단 불가</div><div class="v">증거 부족 시 "불충분"을 정식 결론으로 허용</div></div>
+      <div class="box"><div class="k">하이브리드</div><div class="v">채팅은 외부 LLM, 임베딩(RAG)은 Gemini</div></div>
+    </div>
+  </section>
+
+  <footer>
+    표시된 결과는 실제 에이전트 실행으로 얻은 <b>예시 산출물</b>입니다 · 입력/출력 시각화 자료
+  </footer>
+
+</div>
+
+<script>
+// ── 6노드 정의(라벨/역할) ──
+const NODES = [
+  { ico: "🧩", nm: "주장 추출", role: "extract_claims" },
+  { ico: "🔎", nm: "증거 검색", role: "retrieve · RAG" },
+  { ico: "⚖️", nm: "적대적 토론", role: "검사 ⇄ 변호" },
+  { ico: "👩‍⚖️", nm: "판사+자가반박", role: "judge" },
+  { ico: "🚩", nm: "기법 태깅", role: "병렬" },
+  { ico: "🧾", nm: "종합", role: "synthesize" },
+];
+// 예시 케이스 제목(칩 라벨)
+const CASE_META = {
+  vaccine: "💉 백신 자석설",
+  brain: "🧠 뇌 10% 활용설",
+  warming: "🌡️ 지구 온난화",
+  supplement: "💊 신상 보조제 효능",
+  msg: "🧂 MSG 유해설",
+};
+// 등급 → 색상
+const GRADE_COLOR = {
+  "사실": "var(--g-true)", "대체로 사실": "var(--g-mtrue)",
+  "불충분(판단 불가)": "var(--g-insuf)", "대체로 거짓": "var(--g-mfalse)",
+  "거짓·오도": "var(--g-false)",
+};
+// ── 실측 데이터 (실제 에이전트 실행 산출물) ──
+const CASES = {
+  "vaccine": {
+    "input": "충격! 코로나 백신 맞으면 몸에 자석이 붙는대요. 제 지인도 팔에 숟가락이 딱 붙었다네요. 빨리 가족들한테도 알려주세요!",
+    "report": {
+      "overall_grade": "대체로 거짓",
+      "overall_confidence": 0.635,
+      "claim_breakdown": [
+        {
+          "claim_id": 0,
+          "text": "코로나 백신을 맞으면 몸에 자석이 붙는다",
+          "label": "거짓·오도",
+          "confidence": 0.92,
+          "supporting_sources": [],
+          "refuting_sources": [
+            "과학 상식 정리 (학술)",
+            "팩트체크 정리 (뉴스)"
+          ]
+        },
+        {
+          "claim_id": 1,
+          "text": "지인의 팔에 숟가락이 붙었다",
+          "label": "불충분(판단 불가)",
+          "confidence": 0.35,
+          "supporting_sources": [
+            "과학 상식 정리 (학술)",
+            "출처 불명 메시지 (출처불명)",
+            "팩트체크 정리 (뉴스)"
+          ],
+          "refuting_sources": [
+            "과학 상식 정리 (학술)",
+            "출처 불명 메시지 (출처불명)",
+            "팩트체크 정리 (뉴스)"
+          ]
+        }
+      ],
+      "technique_tags": [
+        {
+          "tag": "감정 자극",
+          "evidence_sentence": "충격! 코로나 백신 맞으면 몸에 자석이 붙는대요.",
+          "library_entry_id": "tech_emotion",
+          "confidence": 0.95
+        },
+        {
+          "tag": "감정 자극",
+          "evidence_sentence": "빨리 가족들한테도 알려주세요!",
+          "library_entry_id": "tech_emotion",
+          "confidence": 0.9
+        },
+        {
+          "tag": "가짜 전문가·권위",
+          "evidence_sentence": "제 지인도 팔에 숟가락이 딱 붙었다네요.",
+          "library_entry_id": "tech_fake_authority",
+          "confidence": 0.85
+        }
+      ],
+      "rebuttal_card": "코로나 백신으로 인한 자석 현상에 대해 함께 살펴봤습니다. 학술 자료와 팩트체크 결과에 따르면 백신 성분에 자성 물질이 포함되지 않아, 이 주장의 신뢰도는 매우 낮습니다(약 8%). 지인분 팔의 숟가락 부착은 현재 근거로는 백신과의 인과관계를 단정하기 어렵습니다. 함께 공식 의료 기관 자료를 확인하면서 정확한 정보를 구분하는 것이 좋을 것 같습니다."
+    }
+  },
+  "brain": {
+    "input": "사람은 평생 뇌의 10%밖에 못 쓴다는 게 과학적 사실이라네요.",
+    "report": {
+      "overall_grade": "거짓·오도",
+      "overall_confidence": 0.85,
+      "claim_breakdown": [
+        {
+          "claim_id": 0,
+          "text": "사람은 평생 뇌의 10%밖에 못 쓴다",
+          "label": "거짓·오도",
+          "confidence": 0.85,
+          "supporting_sources": [
+            "신경과학 일반 사실 (학술)",
+            "의학 일반 정보 (기관)"
+          ],
+          "refuting_sources": [
+            "신경과학 일반 사실 (학술)",
+            "의학 일반 정보 (기관)"
+          ]
+        }
+      ],
+      "technique_tags": [
+        {
+          "tag": "가짜 전문가·권위",
+          "evidence_sentence": "사람은 평생 뇌의 10%밖에 못 쓴다는 게 과학적 사실이라네요.",
+          "library_entry_id": "tech_fake_authority",
+          "confidence": 0.8
+        }
+      ],
+      "rebuttal_card": "평생 뇌의 10%만 쓴다는 주장은 신경과학 분야에서 오래전부터 검증된 거짓입니다(신뢰도 낮음). 최신 뇌영상 연구와 신경과학 학술자료에 따르면, 우리는 일상생활 중 뇌 전체 영역을 사용하고 있으며, 깊은 수면 중에도 뇌 전역이 활성화됩니다. 이 주장이 반복되는 이유는 가짜 전문가 권위를 내세운 마케팅과 관련이 있어 보입니다. 함께 사실 기반의 정보를 확인해 보시기를 권장합니다."
+    }
+  },
+  "warming": {
+    "input": "산업화 이후 지구의 평균 기온이 장기적으로 상승해 왔다.",
+    "report": {
+      "overall_grade": "사실",
+      "overall_confidence": 0.88,
+      "claim_breakdown": [
+        {
+          "claim_id": 0,
+          "text": "산업화 이후 지구의 평균 기온이 장기적으로 상승해 왔다.",
+          "label": "사실",
+          "confidence": 0.88,
+          "supporting_sources": [
+            "기상·기후 관측 정리 (정부·공공)",
+            "기후과학 일반 설명 (학술)",
+            "기후과학 합의 정리 (학술)"
+          ],
+          "refuting_sources": []
+        }
+      ],
+      "technique_tags": [],
+      "rebuttal_card": "산업화 이후 지구 평균 기온이 장기적으로 상승해온 것은 기상·기후 관측 자료와 과학적 합의를 통해 신뢰도 높게 확인되는 내용입니다. 정부·공공 기관의 관측 정리와 학술적 기후과학 연구들이 일관되게 이를 뒷받침하고 있습니다. 이 부분은 함께 신뢰할 수 있는 근거라고 판단됩니다."
+    }
+  },
+  "supplement": {
+    "input": "이번에 새로 나온 OO 건강보조제가 면역력을 정확히 30% 올려준다고 합니다.",
+    "report": {
+      "overall_grade": "불충분(판단 불가)",
+      "overall_confidence": 0.15,
+      "claim_breakdown": [
+        {
+          "claim_id": 0,
+          "text": "새로 나온 OO 건강보조제가 면역력을 정확히 30% 올려준다",
+          "label": "불충분(판단 불가)",
+          "confidence": 0.15,
+          "supporting_sources": [
+            "식품·건강 일반 정보 (기관)"
+          ],
+          "refuting_sources": [
+            "식품·건강 일반 정보 (기관)"
+          ]
+        }
+      ],
+      "technique_tags": [
+        {
+          "tag": "가짜 통계·체리피킹",
+          "evidence_sentence": "이번에 새로 나온 OO 건강보조제가 면역력을 정확히 30% 올려준다고 합니다.",
+          "library_entry_id": "tech_cherry_picking",
+          "confidence": 0.75
+        }
+      ],
+      "rebuttal_card": "이 건강보조제가 면역력을 \"정확히 30%\" 올린다는 주장은 현재 근거로는 단정하기 어렵습니다. 식품·건강 정보 기관의 자료를 확인해보니 통계의 신뢰도가 낮고 선별된 데이터만 인용된 것으로 보입니다. 함께 더 광범위한 임상 데이터나 공신력 있는 검증 결과를 찾아보는 것을 제안드립니다."
+    }
+  },
+  "msg": {
+    "input": "MSG는 몸에 해로우니까 무조건 안 들어간 것만 골라 드세요. 안 그러면 큰일 납니다.",
+    "report": {
+      "overall_grade": "대체로 거짓",
+      "overall_confidence": 0.75,
+      "claim_breakdown": [
+        {
+          "claim_id": 0,
+          "text": "MSG는 몸에 해롭다",
+          "label": "대체로 거짓",
+          "confidence": 0.75,
+          "supporting_sources": [],
+          "refuting_sources": [
+            "식품안전 일반 정보 (정부·공공)"
+          ]
+        }
+      ],
+      "technique_tags": [
+        {
+          "tag": "거짓 이분법",
+          "evidence_sentence": "MSG는 몸에 해로우니까 무조건 안 들어간 것만 골라 드세요. 안 그러면 큰일 납니다.",
+          "library_entry_id": "tech_false_dichotomy",
+          "confidence": 0.85
+        },
+        {
+          "tag": "감정 자극",
+          "evidence_sentence": "안 그러면 큰일 납니다.",
+          "library_entry_id": "tech_emotion",
+          "confidence": 0.8
+        }
+      ],
+      "rebuttal_card": "MSG가 몸에 해롭다는 주장은 현재까지의 과학적 근거로는 뒷받침되지 않습니다. 정부와 공공기관의 식품안전 정보에 따르면, 적정량의 MSG 섭취는 안전한 것으로 평가됩니다. 혹시 이 주제에 대해 더 알고 싶으시다면, 공식 식품안전 자료를 함께 확인해보는 것이 좋겠습니다. 함께 정확한 정보를 찾아보시길 제안드립니다."
+    }
+  }
+};
+
+function el(tag, cls, html) { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; }
+
+function buildPipe() {
+  const p = document.getElementById("pipe"); p.innerHTML = "";
+  return NODES.map((n) => {
+    const node = el("div", "node");
+    node.innerHTML = `<div class="ico">${n.ico}</div><div class="nm">${n.nm}</div><div class="role">${n.role}</div>`;
+    p.appendChild(node); return node;
+  });
+}
+
+function escapeHtml(s) { return (s || "").replace(/[&<>"]/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;" }[c])); }
+
+function renderResult(data) {
+  const r = data.report;
+  const out = document.getElementById("result"); out.innerHTML = "";
+  const color = GRADE_COLOR[r.overall_grade] || "var(--g-insuf)";
+  const conf = Math.round((r.overall_confidence || 0) * 100);
+
+  // 종합 등급 + 게이지
+  const head = el("div", "gradewrap");
+  head.appendChild(el("div", "gradebadge", `종합: ${escapeHtml(r.overall_grade)}`)).style.background = color;
+  const g = el("div", "gauge");
+  g.innerHTML = `<div style="font-size:.85rem;color:var(--muted);margin-bottom:6px">종합 신뢰도 ${conf}%</div>
+    <div class="meter"><span style="width:${conf}%;background:${color}"></span></div>`;
+  head.appendChild(g);
+  out.appendChild(head);
+
+  // 주장별 판정
+  (r.claim_breakdown || []).forEach((c) => {
+    const cc = el("div", "claim");
+    const ccolor = GRADE_COLOR[c.label] || "var(--g-insuf)";
+    const cconf = Math.round((c.confidence || 0) * 100);
+    let srcs = "";
+    if ((c.supporting_sources || []).length) srcs += `<div class="srcs"><b>지지 출처:</b> ${c.supporting_sources.map(escapeHtml).join(", ")}</div>`;
+    if ((c.refuting_sources || []).length) srcs += `<div class="srcs"><b>반박 출처:</b> ${c.refuting_sources.map(escapeHtml).join(", ")}</div>`;
+    if (!srcs) srcs = `<div class="srcs">근거 코퍼스 기반 판정</div>`;
+    cc.innerHTML = `<div class="row" style="justify-content:space-between;margin:0">
+        <span class="txt">“${escapeHtml(c.text)}”</span>
+        <span class="lbl" style="background:${ccolor}">${escapeHtml(c.label)} · ${cconf}%</span></div>
+      <div class="meter" style="margin-top:10px"><span style="width:${cconf}%;background:${ccolor}"></span></div>${srcs}`;
+    out.appendChild(cc);
+  });
+
+  // 조작 기법
+  const techWrap = el("div", null, `<h2 style="font-size:1rem;margin:18px 0 6px">🚩 발견된 조작 기법</h2>`);
+  if ((r.technique_tags || []).length) {
+    const seen = new Set();
+    (r.technique_tags).forEach((t) => {
+      if (seen.has(t.tag + t.evidence_sentence)) return; seen.add(t.tag + t.evidence_sentence);
+      techWrap.appendChild(el("span", "tag", `${escapeHtml(t.tag)}`));
+      techWrap.appendChild(el("div", "tagev", `└ “${escapeHtml(t.evidence_sentence)}”`));
+    });
+  } else { techWrap.appendChild(el("div", "srcs", "뚜렷한 조작 기법이 식별되지 않았습니다.")); }
+  out.appendChild(techWrap);
+
+  // 반론 카드
+  const rb = el("div", null, `<h2 style="font-size:1rem;margin:18px 0 6px">💬 반론 카드 (단톡방 붙여넣기)</h2>`);
+  const box = el("div", "rebut", `${escapeHtml(r.rebuttal_card)}`);
+  const cp = el("button", "copybtn", "복사");
+  cp.onclick = () => { navigator.clipboard && navigator.clipboard.writeText(r.rebuttal_card); cp.textContent = "복사됨 ✓"; setTimeout(() => cp.textContent = "복사", 1500); };
+  box.appendChild(cp); rb.appendChild(box); out.appendChild(rb);
+}
+
+function runCase(caseId, inputText) {
+  const data = CASES[caseId];
+  document.getElementById("pipeCard").classList.remove("hidden");
+  document.getElementById("resultCard").classList.add("hidden");
+  const nodes = buildPipe();
+  // 순차 점등 애니메이션
+  let i = 0;
+  const step = () => {
+    if (i > 0) nodes[i - 1].classList.replace("active", "done");
+    if (i < nodes.length) { nodes[i].classList.add("active"); i++; setTimeout(step, 420); }
+    else {
+      document.getElementById("resultCard").classList.remove("hidden");
+      renderResult(data);
+      document.getElementById("resultCard").scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  };
+  step();
+}
+
+function findCaseByInput(text) {
+  text = (text || "").trim();
+  for (const id in CASES) { if (CASES[id].input.trim() === text) return id; }
+  // 부분 일치 허용
+  for (const id in CASES) { if (text && CASES[id].input.includes(text)) return id; }
+  return null;
+}
+
+// 칩 생성
+const chipBox = document.getElementById("chips");
+Object.keys(CASE_META).forEach((id) => {
+  if (!CASES[id]) return;
+  const c = el("span", "chip", CASE_META[id]);
+  c.onclick = () => { document.getElementById("inp").value = CASES[id].input; runCase(id); };
+  chipBox.appendChild(c);
+});
+
+document.getElementById("runBtn").onclick = () => {
+  const text = document.getElementById("inp").value;
+  const id = findCaseByInput(text);
+  if (id) { runCase(id); }
+  else {
+    document.getElementById("pipeCard").classList.add("hidden");
+    const rc = document.getElementById("resultCard"); rc.classList.remove("hidden");
+    document.getElementById("result").innerHTML =
+      `<div class="rebut">위 <b>예시 데이터</b> 칩을 선택하면 해당 입력의 실제 산출물(신뢰 등급·근거·기법·반론 카드)을 확인할 수 있습니다.</div>`;
+    rc.scrollIntoView({ behavior: "smooth" });
+  }
+};
+</script>
+</body>
+</html>

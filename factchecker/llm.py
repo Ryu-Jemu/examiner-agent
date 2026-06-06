@@ -9,6 +9,7 @@ degrade 하도록, 구조화 호출 실패 시 호출자가 정한 기본값을 
 
 from __future__ import annotations
 
+import contextvars
 import logging
 import time
 from functools import lru_cache
@@ -19,6 +20,25 @@ from pydantic import BaseModel
 from .config import get_settings
 
 logger = logging.getLogger("factchecker.llm")
+
+# 요청 범위 사용자 API 키(BYOK). 서버가 요청마다 set/reset 한다. graph.invoke 이전에
+# 설정하면 LangGraph 가 병렬 노드 워커로 컨텍스트를 복사할 때 키가 함께 전파된다.
+_user_api_key: contextvars.ContextVar[str | None] = contextvars.ContextVar(
+    "factchecker_user_api_key", default=None
+)
+
+
+def set_request_api_key(key: str | None):
+    """요청 범위 키 설정. 반환된 토큰을 finally 에서 reset_request_api_key 로 되돌린다."""
+    return _user_api_key.set((key or "").strip() or None)
+
+
+def reset_request_api_key(token) -> None:
+    try:
+        _user_api_key.reset(token)
+    except (ValueError, LookupError):  # 다른 컨텍스트의 토큰이면 무시
+        pass
+
 
 T = TypeVar("T", bound=BaseModel)
 
@@ -55,23 +75,29 @@ def _throttle() -> None:
     _last_call_ts = time.monotonic()
 
 
-@lru_cache(maxsize=2)
-def get_llm():
-    """LangChain 채팅 모델을 반환한다(캐시).
+@lru_cache(maxsize=8)
+def _build_llm(model: str, api_key: str, max_tokens: int):
+    """모델 ID 로 채팅 모델을 만든다(키별 캐시). `init_chat_model` 이 공급자를 자동 선택.
 
-    `LLM_MODEL` 의 모델 ID 로 `init_chat_model` 이 적절한 통합을 자동 선택한다.
     sampling 파라미터(temperature 등)는 일부 모델이 거부할 수 있어 전달하지 않고,
-    응답 상한만 `LLM_MAX_TOKENS` 로 둔다.
+    응답 상한만 `LLM_MAX_TOKENS` 로 둔다. 키별 캐시는 LRU 8개로 제한해 BYOK 다중 키의
+    메모리 보관을 한정한다.
     """
     from langchain.chat_models import init_chat_model
 
-    settings = get_settings()
     return init_chat_model(
-        model=settings.llm_model,
-        api_key=settings.llm_api_key,
-        max_tokens=settings.llm_max_tokens,
-        timeout=120,
+        model=model, api_key=api_key, max_tokens=max_tokens, timeout=120
     )
+
+
+def get_llm():
+    """현재 요청에 적용할 채팅 모델을 반환한다.
+
+    키 우선순위: 요청 범위 사용자 키(BYOK) > 환경설정 `LLM_API_KEY`.
+    """
+    settings = get_settings()
+    key = _user_api_key.get(None) or settings.llm_api_key
+    return _build_llm(settings.llm_model, key, settings.llm_max_tokens)
 
 
 @lru_cache(maxsize=2)
@@ -79,7 +105,17 @@ def get_embeddings():
     """임베딩 객체(RAG). 기본 Gemini 임베딩, 선택적으로 로컬 HuggingFace."""
     settings = get_settings()
     if settings.embedding_backend == "hf":
-        from langchain_huggingface import HuggingFaceEmbeddings  # 선택 의존성
+        try:
+            from langchain_huggingface import HuggingFaceEmbeddings  # 선택 의존성
+        except ModuleNotFoundError as exc:
+            from .config import ConfigError
+
+            raise ConfigError(
+                "\n[설정 오류] EMBEDDING_BACKEND=hf 인데 로컬 임베딩 라이브러리가 없습니다.\n"
+                "  해결: pip install -e \".[local-embed]\"  "
+                "(langchain-huggingface + sentence-transformers)\n"
+                "  또는 .env 에서 EMBEDDING_BACKEND=gemini 로 변경하세요.\n"
+            ) from exc
 
         return HuggingFaceEmbeddings(model_name=settings.hf_embedding_model)
 

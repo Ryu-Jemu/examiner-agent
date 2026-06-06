@@ -1,0 +1,31 @@
+# Render Blueprint — 라이브 웹 앱 상시 배포 (BYOK: 사용자 키 입력)
+# 사용법: Render → New → Blueprint → 이 저장소 연결 → 아래 sync:false 값 입력 → Deploy
+#
+# 보안: 서버에는 채팅 LLM 키를 두지 않는다(ALLOW_USER_KEY=true). 각 사용자가 UI 에
+#       자기 키를 입력하며, 키는 서버에 저장·기록되지 않는다(HTTPS 전송).
+services:
+  - type: web
+    name: factchecker
+    runtime: python
+    plan: free                # 무료 등급(유휴 시 슬립/콜드스타트). 메모리 여유가 필요하면 starter 권장.
+    # 빌드 시 인덱스를 미리 만들어 콜드스타트를 줄인다(키 없으면 건너뜀 → 런타임에 빌드).
+    buildCommand: "pip install -r requirements.txt && pip install -e . && (python -m factchecker.rag.ingest || true)"
+    startCommand: "python server.py"
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: ALLOW_USER_KEY        # BYOK: 사용자가 요청마다 키 입력 → 서버에 LLM 키 불필요
+        value: "true"
+      - key: EMBEDDING_BACKEND     # 무료 등급 메모리(512MB)에 맞춰 Gemini 임베딩 사용(로컬 torch 미사용)
+        value: gemini
+      - key: HOST
+        value: "0.0.0.0"
+      - key: PYTHON_VERSION
+        value: "3.12"
+      - key: MAX_CONCURRENCY
+        value: "2"
+      - key: GOOGLE_API_KEY        # 임베딩(RAG)용 무료 키 — 대시보드에서 입력(커밋 금지)
+        sync: false
+      - key: LLM_MODEL             # 모델 ID — 대시보드에서 입력(산출물에 모델명 비노출)
+        sync: false
+      # 주의: LLM_API_KEY 는 두지 않는다. 각 사용자가 화면에서 자기 키를 입력한다.

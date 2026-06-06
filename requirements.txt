@@ -15,6 +15,10 @@ python-dotenv>=1.0
 pydantic>=2.5
 gradio>=4.0
 
+# 라이브 웹 앱(server.py) 백엔드
+fastapi>=0.110
+uvicorn>=0.29
+
 # 선택: 라이브 웹 검색 (SEARCH_BACKEND=ddg 일 때만 필요)
 ddgs>=6.0
 

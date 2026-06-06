@@ -1,0 +1,27 @@
+# 비밀/키는 절대 이미지에 넣지 않는다
+.env
+.env.*
+!.env.example
+
+# 가상환경 · 캐시 · 인덱스(런타임 재빌드)
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+data/.chroma/
+
+# VCS · IDE · OS
+.git/
+.gitignore
+.vscode/
+.idea/
+.DS_Store
+
+# 문서/대용량/제출 외 파일(런타임 불필요)
+*.pdf
+project_contents.md
+demo.html
+tests/
+eval/

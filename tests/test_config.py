@@ -59,6 +59,7 @@ def test_defaults():
     assert s.max_loops == 2
     assert s.retrieve_k == 3
     assert s.max_claims == 2
+    assert s.allow_user_key is False        # 기본은 서버 키 모드
 
 
 def test_invalid_backend_falls_back(monkeypatch):
@@ -79,3 +80,29 @@ def test_paths_are_under_repo():
     assert s.evidence_corpus_path == DATA_DIR / "evidence_corpus" / "corpus.json"
     assert s.technique_library_path.exists()
     assert s.testset_path.exists()
+
+
+def test_byok_allows_missing_llm_key(monkeypatch):
+    """ALLOW_USER_KEY=true(BYOK) → LLM_API_KEY 없어도 통과(요청마다 사용자가 입력)."""
+    from factchecker.config import get_settings, reset_settings
+
+    monkeypatch.setenv("ALLOW_USER_KEY", "true")
+    monkeypatch.setenv("LLM_API_KEY", "")
+    monkeypatch.setenv("EMBEDDING_BACKEND", "hf")  # 임베딩 키 검증 회피
+    reset_settings()
+    s = get_settings()
+    assert s.allow_user_key is True
+    assert s.llm_api_key == ""
+
+
+def test_byok_still_requires_model(monkeypatch):
+    """BYOK 라도 LLM_MODEL(모델 ID)은 서버에 있어야 한다."""
+    from factchecker.config import ConfigError, get_settings, reset_settings
+
+    monkeypatch.setenv("ALLOW_USER_KEY", "true")
+    monkeypatch.setenv("LLM_API_KEY", "")
+    monkeypatch.setenv("LLM_MODEL", "")
+    monkeypatch.setenv("EMBEDDING_BACKEND", "hf")
+    reset_settings()
+    with pytest.raises(ConfigError, match="LLM_MODEL"):
+        get_settings()

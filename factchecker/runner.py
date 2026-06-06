@@ -26,23 +26,42 @@ def _get_compiled():
 
 
 def run_factcheck_state(
-    text: str, *, graph=None, recursion_limit: int | None = None
+    text: str,
+    *,
+    graph=None,
+    recursion_limit: int | None = None,
+    api_key: str | None = None,
 ) -> FactCheckState:
-    """그래프를 실행하고 최종 State 전체를 반환한다."""
+    """그래프를 실행하고 최종 State 전체를 반환한다.
+
+    `api_key` 가 주어지면(BYOK) 그 키를 요청 범위로 설정한 뒤 그래프를 실행한다.
+    `graph.invoke` **이전에** 설정해야 병렬 노드 워커로 컨텍스트가 복사되며 전파된다.
+    """
+    from .llm import reset_request_api_key, set_request_api_key
+
     settings = get_settings()
     graph = graph or _get_compiled()
     rl = recursion_limit or (settings.max_loops * 6 + 10)
     initial: FactCheckState = {"input_text": text or ""}
-    final_state = graph.invoke(initial, config={"recursion_limit": rl})
-    return final_state
+
+    token = set_request_api_key(api_key) if api_key else None
+    try:
+        return graph.invoke(initial, config={"recursion_limit": rl})
+    finally:
+        if token is not None:
+            reset_request_api_key(token)
 
 
 def run_factcheck(
-    text: str, *, graph=None, recursion_limit: int | None = None
+    text: str,
+    *,
+    graph=None,
+    recursion_limit: int | None = None,
+    api_key: str | None = None,
 ) -> FinalReport:
     """그래프를 실행하고 최종 리포트(FinalReport)를 반환한다."""
     final_state = run_factcheck_state(
-        text, graph=graph, recursion_limit=recursion_limit
+        text, graph=graph, recursion_limit=recursion_limit, api_key=api_key
     )
     report = final_state.get("final_report")
     if report is None:

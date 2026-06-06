@@ -40,6 +40,7 @@ class Settings:
     llm_api_key: str
     llm_model: str
     llm_max_tokens: int
+    allow_user_key: bool              # BYOK: 요청마다 사용자가 키 입력(서버 키 생략 허용)
     # 임베딩 (RAG)
     google_api_key: str               # EMBEDDING_BACKEND=gemini 일 때 사용
     embedding_backend: str            # "gemini" | "hf"
@@ -99,15 +100,19 @@ def _build_settings(require_api_key: bool = True) -> Settings:
     llm_api_key = (os.getenv("LLM_API_KEY") or "").strip()
     llm_model = (os.getenv("LLM_MODEL") or "").strip()
     google_key = (os.getenv("GOOGLE_API_KEY") or "").strip()
+    allow_user_key = (os.getenv("ALLOW_USER_KEY") or "").strip().lower() in (
+        "1", "true", "yes", "on",
+    )
 
     # 필요한 값만 검증한다.
     if require_api_key:
-        if _missing(llm_api_key):
+        # BYOK(allow_user_key) 면 서버 키는 생략 가능(요청마다 사용자가 입력).
+        if not allow_user_key and _missing(llm_api_key):
             raise ConfigError(
                 "\n[설정 오류] LLM_API_KEY 가 설정되지 않았습니다.\n"
                 "  1) .env.example 을 .env 로 복사하세요:  cp .env.example .env\n"
                 "  2) .env 의 LLM_API_KEY 값을 발급받은 실제 키로 교체하세요.\n"
-                "  (제출/커밋 파일에는 키를 'YOUR-API-KEY-HERE' 로 비워 두세요.)\n"
+                "  (BYOK 배포는 ALLOW_USER_KEY=true 로 두고 키는 사용자가 입력합니다.)\n"
             )
         if _missing(llm_model):
             raise ConfigError(
@@ -134,6 +139,7 @@ def _build_settings(require_api_key: bool = True) -> Settings:
         llm_api_key=llm_api_key,
         llm_model=llm_model,
         llm_max_tokens=_int("LLM_MAX_TOKENS", 4096),
+        allow_user_key=allow_user_key,
         google_api_key=google_key,
         embedding_backend=embedding_backend,
         gemini_embedding_model=(
