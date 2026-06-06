@@ -12,6 +12,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import threading
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
@@ -19,6 +20,11 @@ from typing import Any
 from ..config import get_settings
 
 logger = logging.getLogger("factchecker.rag.vectorstore")
+
+# 인덱스 로드/빌드 직렬화 락. 병렬 분기(retrieve_evidence ↔ tag_techniques)가 같은
+# chromadb 클라이언트를 동시에 처음 생성·접근하면 rust 바인딩 경합('RustBindingsAPI'
+# ...)이 나며 로드가 실패→매 실행 재임베딩된다. 로드/빌드를 직렬화해 이를 막는다.
+_BUILD_LOCK = threading.RLock()
 
 EVIDENCE_COLLECTION = "evidence"
 TECHNIQUE_COLLECTION = "techniques"
@@ -55,8 +61,10 @@ def _embedding_id(settings) -> str:
     """임베딩 백엔드+모델 식별자(벡터 차원이 바뀌는 축). 매니페스트에 함께 저장해
     백엔드 전환 시 차원 불일치를 막는다."""
     if settings.embedding_backend == "hf":
-        return f"hf:{settings.hf_embedding_model}"
-    return f"gemini:{settings.gemini_embedding_model}"
+        base = f"hf:{settings.hf_embedding_model}"
+    else:
+        base = f"gemini:{settings.gemini_embedding_model}"
+    return base + "|cosine"  # 거리 메트릭도 식별자에 포함(변경 시 자동 재빌드)
 
 
 def _read_manifest(chroma_dir: Path) -> dict[str, str]:
@@ -142,7 +150,8 @@ def _build_collection(
         except Exception as exc:  # noqa: BLE001
             logger.debug("컬렉션 삭제 생략(%s): %s", collection, exc)
     store = Chroma(
-        collection_name=collection, embedding_function=embeddings, client=client
+        collection_name=collection, embedding_function=embeddings, client=client,
+        collection_metadata={"hnsw:space": "cosine"},  # 관련성 점수 [0,1] 포터블
     )
 
     # 소량 청크 + 백오프로 추가한다. 무료 등급 임베딩 RPM 이 낮아 한 번에 다수 문서를
@@ -180,7 +189,13 @@ def _load_collection(*, collection: str, chroma_dir: Path, embeddings):
     )
 
 
-def _get_or_build(
+def _get_or_build(**kwargs):
+    """로드/빌드를 프로세스 내 락으로 직렬화(병렬 분기의 chromadb 클라이언트 경합 방지)."""
+    with _BUILD_LOCK:
+        return _get_or_build_impl(**kwargs)
+
+
+def _get_or_build_impl(
     *, collection: str, source_path: Path, doc_fn, embeddings=None, force: bool = False
 ):
     settings = get_settings()

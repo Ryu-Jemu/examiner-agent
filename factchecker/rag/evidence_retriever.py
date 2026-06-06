@@ -62,14 +62,22 @@ def retrieve_for_claim(
 
     items: list[EvidenceItem] = []
 
-    # 1) 로컬 코퍼스 (항상 사용 — 결정론적)
+    # 1) 로컬 코퍼스. 관련성(코사인) 임계값 이상만 채택 → 코퍼스 밖 주장에 엉뚱한
+    #    근거가 섞이지 않게 한다. 임계값<=0 이면 점수 없이 기존 경로(결정론적 테스트용).
+    min_rel = settings.retrieve_min_relevance
+    scored: list[tuple] = []
     try:
-        docs = store.similarity_search(claim_text, k=k)
+        if min_rel > 0:
+            scored = list(store.similarity_search_with_relevance_scores(claim_text, k=k))
+        else:
+            scored = [(doc, None) for doc in store.similarity_search(claim_text, k=k)]
     except Exception as exc:  # noqa: BLE001
         logger.warning("로컬 유사도 검색 실패: %s", exc)
-        docs = []
+        scored = []
 
-    for doc in docs:
+    for doc, score in scored:
+        if score is not None and score < min_rel:
+            continue  # 관련성 낮음 → 무관 스니펫 제외
         item = _doc_to_evidence(doc, claim_id)
         key = (claim_id, item.snippet_id or item.snippet[:40])
         if key in existing_ids:

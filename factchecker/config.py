@@ -52,6 +52,7 @@ class Settings:
     # 그래프/실행
     max_loops: int
     retrieve_k: int
+    retrieve_min_relevance: float     # 코사인 관련성 임계값(이하 스니펫은 무관으로 제외)
     confidence_delta_threshold: float
     max_claims: int
     llm_throttle_seconds: float
@@ -150,6 +151,7 @@ def _build_settings(require_api_key: bool = True) -> Settings:
         tavily_api_key=(os.getenv("TAVILY_API_KEY") or "").strip() or None,
         max_loops=_int("MAX_LOOPS", 2),
         retrieve_k=_int("RETRIEVE_K", 3),
+        retrieve_min_relevance=_float("RETRIEVE_MIN_RELEVANCE", 0.32),
         confidence_delta_threshold=_float("CONFIDENCE_DELTA_THRESHOLD", 0.05),
         max_claims=_int("MAX_CLAIMS", 2),
         llm_throttle_seconds=_float("LLM_THROTTLE_SECONDS", 0.0),

@@ -18,6 +18,8 @@ services:
         value: "true"
       - key: EMBEDDING_BACKEND     # 무료 등급 메모리(512MB)에 맞춰 Gemini 임베딩 사용(로컬 torch 미사용)
         value: gemini
+      - key: SEARCH_BACKEND        # 웹 검색(DuckDuckGo, 키 불필요) — 코퍼스 밖 주장도 실제 데이터로 판정
+        value: ddg
       - key: HOST
         value: "0.0.0.0"
       - key: PYTHON_VERSION

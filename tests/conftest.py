@@ -20,6 +20,8 @@ def _env(tmp_path, monkeypatch):
     monkeypatch.setenv("CHROMA_DIR", str(tmp_path / ".chroma"))
     monkeypatch.setenv("MAX_LOOPS", "2")
     monkeypatch.setenv("RETRIEVE_K", "3")
+    # 가짜 임베딩은 관련성 점수가 무의미하므로 임계값 0(필터 끔) → 결정론적 테스트
+    monkeypatch.setenv("RETRIEVE_MIN_RELEVANCE", "0")
 
     from factchecker.config import reset_settings
 

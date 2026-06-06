@@ -42,7 +42,7 @@ def reset_request_api_key(token) -> None:
 
 T = TypeVar("T", bound=BaseModel)
 
-# 무료 등급 레이트리밋(429/quota) 식별용 마커
+# 재시도(백오프) 대상: 레이트리밋(429/quota) + 일시적 네트워크 오류
 _RATE_LIMIT_MARKERS = (
     "429",
     "resourceexhausted",
@@ -53,6 +53,16 @@ _RATE_LIMIT_MARKERS = (
     "too many requests",
     "overloaded",   # 일부 공급자의 과부하(529)
     "529",
+    # 일시적 네트워크/서버 오류 — 즉시 degrade 대신 백오프 재시도
+    "connection error",
+    "connection reset",
+    "timed out",
+    "timeout",
+    "temporarily unavailable",
+    "service unavailable",
+    "502",
+    "503",
+    "504",
 )
 
 _last_call_ts = 0.0
