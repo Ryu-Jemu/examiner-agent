@@ -12,7 +12,7 @@ services:
     buildCommand: "pip install -r requirements.txt && pip install -e . && (python -m factchecker.rag.ingest || true)"
     startCommand: "python server.py"
     healthCheckPath: /health
-    autoDeploy: true
+    autoDeployTrigger: commit       # main 푸시마다 자동 재배포
     envVars:
       - key: ALLOW_USER_KEY        # BYOK: 사용자가 요청마다 키 입력 → 서버에 LLM 키 불필요
         value: "true"
