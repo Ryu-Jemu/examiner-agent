@@ -95,6 +95,17 @@ def test_byok_allows_missing_llm_key(monkeypatch):
     assert s.llm_api_key == ""
 
 
+def test_llm_model_with_api_key_raises(monkeypatch):
+    """LLM_MODEL 에 API 키를 잘못 넣으면 즉시 친절한 오류(키/모델 혼동 방지)."""
+    from factchecker.config import ConfigError, get_settings, reset_settings
+
+    monkeypatch.setenv("LLM_MODEL", "sk-THIS-IS-A-KEY-NOT-A-MODEL-ID")
+    monkeypatch.setenv("EMBEDDING_BACKEND", "hf")
+    reset_settings()
+    with pytest.raises(ConfigError, match="API 키로 보이는"):
+        get_settings()
+
+
 def test_byok_still_requires_model(monkeypatch):
     """BYOK 라도 LLM_MODEL(모델 ID)은 서버에 있어야 한다."""
     from factchecker.config import ConfigError, get_settings, reset_settings

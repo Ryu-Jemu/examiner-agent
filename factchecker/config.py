@@ -120,6 +120,12 @@ def _build_settings(require_api_key: bool = True) -> Settings:
                 "\n[설정 오류] LLM_MODEL 이 설정되지 않았습니다.\n"
                 "  .env 의 LLM_MODEL 에 사용할 모델 ID 를 입력하세요.\n"
             )
+        if llm_model.startswith(("sk-", "AIza", "Bearer ")):
+            raise ConfigError(
+                "\n[설정 오류] LLM_MODEL 에 API 키로 보이는 값이 들어 있습니다.\n"
+                "  LLM_MODEL 에는 '모델 ID'(모델 이름)를, API 키는 LLM_API_KEY\n"
+                "  (BYOK 배포는 화면 입력)에 넣어야 합니다. 두 값을 바꿔 넣지 마세요.\n"
+            )
         if embedding_backend == "gemini" and _missing(google_key):
             raise ConfigError(
                 "\n[설정 오류] EMBEDDING_BACKEND=gemini 인데 GOOGLE_API_KEY 가 없습니다.\n"

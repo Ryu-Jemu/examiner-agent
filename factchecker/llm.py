@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import contextvars
 import logging
+import re
 import time
 from functools import lru_cache
 from typing import Type, TypeVar
@@ -70,6 +71,14 @@ _last_call_ts = 0.0
 
 def _is_rate_limit(exc: Exception) -> bool:
     return any(m in str(exc).lower() for m in _RATE_LIMIT_MARKERS)
+
+
+# 로그·오류 메시지에서 API 키로 보이는 토큰을 마스킹(키가 서버 로그로 새지 않도록)
+_KEY_RE = re.compile(r"(sk-ant-[\w\-]+|sk-[A-Za-z0-9]{16,}|AIza[\w\-]{20,})")
+
+
+def _redact(text: str) -> str:
+    return _KEY_RE.sub("[REDACTED]", text or "")
 
 
 def _throttle() -> None:
@@ -174,6 +183,9 @@ def structured_invoke(
                 )
                 time.sleep(wait)
                 continue
-            logger.warning("구조화 호출 실패(%s) → 기본값: %s", schema.__name__, exc)
+            logger.warning(
+                "구조화 호출 실패(%s) → 기본값: %s",
+                schema.__name__, _redact(str(exc)),
+            )
             return default
     return default
