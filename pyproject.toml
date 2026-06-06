@@ -22,7 +22,6 @@ dependencies = [
     "google-generativeai>=0.8",
     "python-dotenv>=1.0",
     "pydantic>=2.5",
-    "gradio>=4.0",
     "fastapi>=0.110",
     "uvicorn>=0.29",
 ]
@@ -30,6 +29,8 @@ dependencies = [
 [project.optional-dependencies]
 web = ["ddgs>=6.0"]
 dev = ["pytest>=8.0"]
+# Gradio 대체 UI(app.py)는 선택 설치 — 서버(server.py)·CLI 는 불필요(배포 경량화)
+ui = ["gradio>=4.0"]
 # 로컬 임베딩(EMBEDDING_BACKEND=hf) — Gemini 임베딩 없이 오프라인으로 RAG 사용
 local-embed = ["langchain-huggingface>=0.1,<0.2", "sentence-transformers>=2.7"]
 

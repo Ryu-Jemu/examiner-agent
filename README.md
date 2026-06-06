@@ -93,7 +93,7 @@ python server.py          # → 브라우저에서 http://127.0.0.1:8000 접속
 #   입력창에 아무 루머나 입력 → 실제 에이전트가 증거 수집·판정·반론 카드 생성.
 #   API 키는 서버 측 .env 에서만 사용(HTML/브라우저로 전달되지 않음).
 
-# 웹 UI (Gradio) — 동일 기능의 대안 UI
+# 웹 UI (Gradio) — 동일 기능의 대안 UI (Gradio 는 선택 설치: pip install -e ".[ui]")
 python app.py
 
 # 헤드리스 CLI
