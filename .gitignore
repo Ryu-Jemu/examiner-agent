@@ -56,6 +56,6 @@ htmlcov/
 flagged/
 
 #--- External Docs ---
-result.md
-project_contents.md
+*.md
+!README.md
 *.pdf
