@@ -1,10 +1,4 @@
-"""Node 5: tag_techniques (RAG 기법 라이브러리, 병렬 분기).
-
-입력 본문만 보고 조작 기법을 태깅한다(진위 판정과 독립 → 메인 체인과 병렬 실행).
-`technique_tags` 는 add 리듀서를 가지므로 병렬 쓰기에도 안전하다.
-"""
-
-from __future__ import annotations
+"""입력 본문의 조작 기법을 태깅하는 병렬 노드(진위 판정과 독립)."""
 
 import logging
 
@@ -24,7 +18,7 @@ def tag_techniques(state: FactCheckState) -> dict:
 
     try:
         entries = retrieve_techniques(input_text)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.warning("기법 라이브러리 회수 실패: %s", exc)
         entries = []
 
@@ -46,5 +40,4 @@ def tag_techniques(state: FactCheckState) -> dict:
             t.library_entry_id = tag_to_id.get(t.tag.value, t.library_entry_id)
         tags.append(t)
 
-    logger.info("기법 태그 %d개", len(tags))
     return {"technique_tags": tags}  # add 리듀서(병렬 안전)

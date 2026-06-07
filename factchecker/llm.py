@@ -1,13 +1,4 @@
-"""LLM·임베딩 팩토리 + 안전한 구조화 출력 헬퍼.
-
-LLM 구조화 출력은 가끔 None/누락/파싱 실패가 발생한다. 모든 노드가 안전하게
-degrade 하도록, 구조화 호출 실패 시 호출자가 정한 기본값을 돌려주는 헬퍼를 둔다.
-
-채팅 모델은 `LLM_MODEL` 환경변수의 모델 ID 로 `init_chat_model` 을 통해 로드한다
-(공급자는 모델 ID 로부터 자동 추론). 임베딩은 Gemini(또는 로컬 hf)를 사용한다.
-"""
-
-from __future__ import annotations
+"""채팅 LLM·임베딩 팩토리와 구조화 출력 헬퍼(실패 시 기본값으로 degrade)."""
 
 import contextvars
 import logging
@@ -96,12 +87,7 @@ def _throttle() -> None:
 
 @lru_cache(maxsize=8)
 def _build_llm(model: str, api_key: str, max_tokens: int):
-    """모델 ID 로 채팅 모델을 만든다(키별 캐시). `init_chat_model` 이 공급자를 자동 선택.
-
-    sampling 파라미터(temperature 등)는 일부 모델이 거부할 수 있어 전달하지 않고,
-    응답 상한만 `LLM_MAX_TOKENS` 로 둔다. 키별 캐시는 LRU 8개로 제한해 BYOK 다중 키의
-    메모리 보관을 한정한다.
-    """
+    # 키별 캐시. temperature 등 sampling 파라미터는 일부 모델이 거부해 전달하지 않는다.
     from langchain.chat_models import init_chat_model
 
     return init_chat_model(
@@ -110,10 +96,7 @@ def _build_llm(model: str, api_key: str, max_tokens: int):
 
 
 def get_llm():
-    """현재 요청에 적용할 채팅 모델을 반환한다.
-
-    키 우선순위: 요청 범위 사용자 키(BYOK) > 환경설정 `LLM_API_KEY`.
-    """
+    # 키 우선순위: 요청 범위 사용자 키(BYOK) > 환경설정 LLM_API_KEY.
     settings = get_settings()
     key = _user_api_key.get(None) or settings.llm_api_key
     return _build_llm(settings.llm_model, key, settings.llm_max_tokens)
@@ -121,23 +104,8 @@ def get_llm():
 
 @lru_cache(maxsize=2)
 def get_embeddings():
-    """임베딩 객체(RAG). 기본 Gemini 임베딩, 선택적으로 로컬 HuggingFace."""
+    """RAG 용 Gemini 임베딩 객체."""
     settings = get_settings()
-    if settings.embedding_backend == "hf":
-        try:
-            from langchain_huggingface import HuggingFaceEmbeddings  # 선택 의존성
-        except ModuleNotFoundError as exc:
-            from .config import ConfigError
-
-            raise ConfigError(
-                "\n[설정 오류] EMBEDDING_BACKEND=hf 인데 로컬 임베딩 라이브러리가 없습니다.\n"
-                "  해결: pip install -e \".[local-embed]\"  "
-                "(langchain-huggingface + sentence-transformers)\n"
-                "  또는 .env 에서 EMBEDDING_BACKEND=gemini 로 변경하세요.\n"
-            ) from exc
-
-        return HuggingFaceEmbeddings(model_name=settings.hf_embedding_model)
-
     from langchain_google_genai import GoogleGenerativeAIEmbeddings
 
     return GoogleGenerativeAIEmbeddings(
@@ -152,11 +120,7 @@ def structured_invoke(
     *,
     default: T,
 ) -> T:
-    """`schema` 로 구조화된 응답을 받되, 실패하면 `default` 를 돌려준다.
-
-    - 레이트리밋(429/529/quota) 은 지수 백오프로 재시도한다.
-    - 그 외 실패는 즉시 기본값으로 degrade 해 노드가 크래시하지 않게 한다.
-    """
+    """schema 로 구조화 응답을 받고, 실패 시 default 반환. 레이트리밋은 백오프 재시도."""
     max_attempts = max(1, get_settings().llm_max_attempts)
     for attempt in range(max_attempts):
         try:
@@ -170,11 +134,11 @@ def structured_invoke(
             if not isinstance(result, schema):
                 try:
                     return schema.model_validate(result)
-                except Exception:  # noqa: BLE001
+                except Exception:
                     logger.warning("구조화 출력 타입 불일치 → 기본값 (%s)", schema.__name__)
                     return default
             return result
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             if _is_rate_limit(exc) and attempt < max_attempts - 1:
                 wait = min(60, 5 * (2 ** attempt))  # 5,10,20,40,60s
                 logger.warning(

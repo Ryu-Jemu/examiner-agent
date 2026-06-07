@@ -1,24 +1,15 @@
-"""단일 백엔드 API: 텍스트 → 최종 리포트.
-
-CLI·Gradio·평가 하니스가 모두 이 함수를 통해 그래프를 실행한다.
-"""
-
-from __future__ import annotations
-
-import logging
+"""단일 백엔드 API: 텍스트 → 최종 리포트(CLI·서버·평가가 모두 이 함수를 사용)."""
 
 from .config import get_settings
 from .graph import compile_graph
 from .models import FinalReport
 from .state import FactCheckState
 
-logger = logging.getLogger("factchecker.runner")
-
 _COMPILED = None
 
 
 def _get_compiled():
-    """컴파일된 그래프 싱글턴(반복 실행 시 재컴파일 방지)."""
+    # 컴파일된 그래프 싱글턴(반복 실행 시 재컴파일 방지).
     global _COMPILED
     if _COMPILED is None:
         _COMPILED = compile_graph()
@@ -32,11 +23,8 @@ def run_factcheck_state(
     recursion_limit: int | None = None,
     api_key: str | None = None,
 ) -> FactCheckState:
-    """그래프를 실행하고 최종 State 전체를 반환한다.
-
-    `api_key` 가 주어지면(BYOK) 그 키를 요청 범위로 설정한 뒤 그래프를 실행한다.
-    `graph.invoke` **이전에** 설정해야 병렬 노드 워커로 컨텍스트가 복사되며 전파된다.
-    """
+    """그래프를 실행해 최종 State 를 반환한다. api_key(BYOK)는 invoke 전에 요청
+    범위로 설정해야 병렬 노드 워커로 컨텍스트가 전파된다."""
     from .llm import reset_request_api_key, set_request_api_key
 
     settings = get_settings()
@@ -59,7 +47,7 @@ def run_factcheck(
     recursion_limit: int | None = None,
     api_key: str | None = None,
 ) -> FinalReport:
-    """그래프를 실행하고 최종 리포트(FinalReport)를 반환한다."""
+    """그래프를 실행해 최종 리포트(FinalReport)를 반환한다."""
     final_state = run_factcheck_state(
         text, graph=graph, recursion_limit=recursion_limit, api_key=api_key
     )

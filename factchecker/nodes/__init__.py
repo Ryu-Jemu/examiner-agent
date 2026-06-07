@@ -1,7 +1,5 @@
 """LangGraph 노드 모음 + 라우팅 함수."""
 
-from __future__ import annotations
-
 from .adversarial_debate import adversarial_debate
 from .extract_claims import extract_claims
 from .judge import decide_route, judge, route_after_judge

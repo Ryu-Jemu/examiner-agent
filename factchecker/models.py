@@ -1,19 +1,10 @@
-"""모든 구조화 출력/State 하위객체의 Pydantic 스키마.
-
-LLM 노드는 `.with_structured_output(<여기 모델>)` 으로 이 스키마들을 강제한다.
-enum 은 모두 문자열(str) Enum 으로 두어 Gemini 구조화 출력과 호환되게 한다.
-"""
-
-from __future__ import annotations
+"""구조화 출력·State 하위객체용 Pydantic 스키마. enum 은 Gemini 호환을 위해 str Enum."""
 
 from enum import Enum
 
 from pydantic import BaseModel, Field
 
 
-# ----------------------------------------------------------------------------
-# Enums
-# ----------------------------------------------------------------------------
 class ClaimType(str, Enum):
     FACT = "사실주장"
     OPINION = "의견"
@@ -43,7 +34,7 @@ class TechniqueTagName(str, Enum):
     FALSE_DICHOTOMY = "거짓 이분법"
 
 
-# 출처 유형 → 신뢰도 사전 (결정론적 매핑; retrieve_evidence 에서 사용)
+# 출처 유형 → 신뢰도(결정론적 매핑; retrieve_evidence 에서 사용)
 SOURCE_CREDIBILITY: dict[SourceType, float] = {
     SourceType.GOV: 0.90,
     SourceType.ACADEMIC: 0.85,
@@ -54,9 +45,6 @@ SOURCE_CREDIBILITY: dict[SourceType, float] = {
 }
 
 
-# ----------------------------------------------------------------------------
-# 노드 입출력 / State 하위객체
-# ----------------------------------------------------------------------------
 class Claim(BaseModel):
     claim_id: int = Field(description="0부터 시작하는 주장 식별자")
     text: str = Field(description="원문에서 추출한 검증 대상 문장")
@@ -72,13 +60,13 @@ class ClaimList(BaseModel):
 
 class EvidenceItem(BaseModel):
     claim_id: int
-    snippet_id: str = Field(description="코퍼스 내 안정적 식별자(인용 검증용)")
+    snippet_id: str
     snippet: str
     source: str
     source_type: SourceType = SourceType.UNKNOWN
     credibility: float = Field(ge=0.0, le=1.0, default=0.2)
     url: str | None = None
-    stance: str | None = Field(default=None, description="지지/반박/중립 (선택)")
+    stance: str | None = None
 
 
 class SideArgument(BaseModel):
@@ -106,7 +94,7 @@ class Verdict(BaseModel):
         default_factory=list, description="결론 근거가 된 snippet_id 목록(순서대로)"
     )
     rationale: str = Field(default="", description="판정 근거 설명")
-    # 자가 반박(레드팀)을 판정과 같은 호출에서 함께 산출 → LLM 호출 1회 절약
+    # 자가 반박을 판정과 같은 호출에서 함께 산출 → LLM 호출 1회 절약
     self_refutation: str = Field(
         default="", description="이 판정을 뒤집을 수 있는 가장 강한 반론(레드팀)"
     )
@@ -125,12 +113,12 @@ class VerdictList(BaseModel):
 
 
 class RefutationEntry(BaseModel):
-    """자가 반박 기록. judge 가 각 판정의 self_refutation/survives_refutation 에서 구성."""
+    """자가 반박 기록(judge 가 각 판정에서 구성)."""
 
     loop: int
     claim_id: int
-    challenge: str = Field(description="판정에 대한 가장 강한 반론(레드팀)")
-    survived: bool = Field(description="반론에도 판정이 유지되면 true")
+    challenge: str
+    survived: bool
 
 
 class TechniqueTag(BaseModel):
@@ -160,10 +148,10 @@ class FinalReport(BaseModel):
     overall_confidence: float = Field(ge=0.0, le=1.0)
     claim_breakdown: list[ClaimBreakdown] = Field(default_factory=list)
     technique_tags: list[TechniqueTag] = Field(default_factory=list)
-    rebuttal_card: str = Field(default="", description="단톡방 붙여넣기용 짧은 반박 메시지")
+    rebuttal_card: str = ""
 
 
 class RebuttalCard(BaseModel):
-    """synthesize 노드에서 LLM 이 작성하는 반론 카드(자연어)만의 스키마."""
+    """synthesize 노드에서 LLM 이 작성하는 반론 카드 스키마."""
 
     rebuttal_card: str = Field(description="단톡방에 바로 붙여넣을 짧고 차분한 한국어 메시지")

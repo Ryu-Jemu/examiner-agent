@@ -1,11 +1,4 @@
-"""Node 3: adversarial_debate (검사 ⇄ 변호).
-
-각 주장에 대해 검사·변호가 *해당 주장의 회수 스니펫만* 보고 논거를 만든다.
-환각 차단을 위해 코드 레벨에서 cited_snippet_ids 를 실제 풀 id 의 부분집합으로
-사후 필터링한다(프롬프트 규칙 + 코드 가드 이중 방어).
-"""
-
-from __future__ import annotations
+"""검사 ⇄ 변호 적대적 논거 생성 노드. 인용 id 는 실제 풀의 부분집합으로 사후 필터링한다."""
 
 import logging
 
@@ -34,7 +27,6 @@ def adversarial_debate(state: FactCheckState) -> dict:
     loop = state.get("loop_count", 0)
 
     pairs: list[ArgumentPair] = []
-    skipped = 0
     for claim in claims:
         if not claim.checkable:
             continue
@@ -42,7 +34,6 @@ def adversarial_debate(state: FactCheckState) -> dict:
         # 비용 절감: 증거가 없으면 양측이 인용할 게 없으므로 LLM 호출을 건너뛴다
         # (판사가 증거 0 → "불충분(판단 불가)"으로 처리). 빈 논거쌍만 남긴다.
         if not ev:
-            skipped += 1
             empty = SideArgument(summary="(인용할 증거 없음)", cited_snippet_ids=[])
             pairs.append(
                 ArgumentPair(
@@ -76,7 +67,4 @@ def adversarial_debate(state: FactCheckState) -> dict:
             )
         )
 
-    logger.info(
-        "적대적 논거 %d쌍 생성(loop=%d, 증거없음 %d건 LLM 생략)", len(pairs), loop, skipped
-    )
     return {"arguments": pairs}  # add 리듀서 → 누적

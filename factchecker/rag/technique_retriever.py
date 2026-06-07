@@ -1,10 +1,4 @@
-"""조작 기법 라이브러리 회수.
-
-기법은 4종뿐이므로 입력 본문과 유사한 순서로 전부 회수해 프롬프트에 제공한다
-(RAG 형태를 유지하되 누락 없이 완전한 라이브러리 블록을 만든다).
-"""
-
-from __future__ import annotations
+"""조작 기법 라이브러리 회수(4종뿐이라 유사도 순으로 전부 회수해 프롬프트에 제공)."""
 
 import logging
 
@@ -20,7 +14,7 @@ def retrieve_techniques(input_text: str, *, store=None, k: int = 4) -> list[dict
 
     try:
         docs = store.similarity_search(input_text or " ", k=k)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.warning("기법 유사도 검색 실패: %s", exc)
         docs = []
 

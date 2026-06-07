@@ -14,8 +14,6 @@ dependencies = [
     "langgraph>=0.2,<2.0",
     "langchain>=0.3,<1.0",
     "langchain-core>=0.3,<1.0",
-    "langchain-community>=0.3,<1.0",
-    "langchain-anthropic>=0.3,<0.4",
     "langchain-google-genai>=2.0",
     "langchain-chroma>=0.1",
     "chromadb>=0.5",
@@ -26,28 +24,9 @@ dependencies = [
     "uvicorn>=0.29",
 ]
 
-[project.optional-dependencies]
-web = ["ddgs>=6.0"]
-dev = ["pytest>=8.0"]
-# Gradio 대체 UI(app.py)는 선택 설치 — 서버(server.py)·CLI 는 불필요(배포 경량화)
-ui = ["gradio>=4.0"]
-# 로컬 임베딩(EMBEDDING_BACKEND=hf) — Gemini 임베딩 없이 오프라인으로 RAG 사용
-local-embed = ["langchain-huggingface>=0.1,<0.2", "sentence-transformers>=2.7"]
-
-[project.scripts]
-factcheck = "factchecker.cli_entry:main"
-
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["factchecker*"]
-
-[tool.pytest.ini_options]
-pythonpath = ["."]
-testpaths = ["tests"]
-filterwarnings = [
-    "ignore::pytest.PytestUnraisableExceptionWarning",
-    "ignore:.*allowed_objects.*:UserWarning",
-]
 
 [tool.ruff]
 line-length = 100

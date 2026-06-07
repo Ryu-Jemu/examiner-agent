@@ -1,19 +1,4 @@
-"""LangGraph StateGraph 조립.
-
-흐름:
-    START → extract_claims
-    extract_claims → retrieve_evidence   (메인 체인)
-    extract_claims → tag_techniques      (병렬 분기)
-    retrieve_evidence → adversarial_debate → judge
-    judge -(route)-> retrieve_evidence | synthesize
-    tag_techniques → synthesize          (랑데부)
-    synthesize → END
-
-`tag_techniques` 는 메인 체인과 같은 superstep 에서 병렬 실행되며, technique_tags
-가 add 리듀서를 가져 병렬 쓰기 충돌이 없다.
-"""
-
-from __future__ import annotations
+"""LangGraph StateGraph 조립(전체 흐름은 README 참고)."""
 
 from langgraph.graph import END, START, StateGraph
 

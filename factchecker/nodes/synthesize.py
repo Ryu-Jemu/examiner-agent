@@ -1,12 +1,4 @@
-"""Node 6: synthesize — 최종 리포트 합성.
-
-감사 핵심 수치(overall_grade, claim_breakdown, 지지/반박 출처)는 Python 에서
-*결정론적으로* 계산해 신뢰성을 보존하고, LLM 은 자연어 반론 카드만 작성한다.
-"""
-
-from __future__ import annotations
-
-import logging
+"""최종 리포트 합성 노드. 핵심 수치는 결정론적 계산, 반론 카드만 LLM 이 작성한다."""
 
 from .. import prompts
 from ..llm import structured_invoke
@@ -22,8 +14,6 @@ from ..models import (
     VerdictLabel,
 )
 from ..state import FactCheckState
-
-logger = logging.getLogger("factchecker.nodes.synthesize")
 
 # 등급 → 진실성 점수(결정론적 종합용)
 _TRUTH_SCORE = {
@@ -161,5 +151,4 @@ def synthesize(state: FactCheckState) -> dict:
         technique_tags=tags,
         rebuttal_card=rebuttal.rebuttal_card,
     )
-    logger.info("최종 리포트 합성 완료: 등급=%s", overall.value)
     return {"final_report": report}

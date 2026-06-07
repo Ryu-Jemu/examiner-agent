@@ -1,7 +1,5 @@
 """프롬프트용 블록 포매팅 헬퍼."""
 
-from __future__ import annotations
-
 from ..models import ArgumentPair, Claim, EvidenceItem
 
 

@@ -16,16 +16,10 @@ services:
     envVars:
       - key: ALLOW_USER_KEY        # BYOK: 사용자가 요청마다 키 입력 → 서버에 LLM 키 불필요
         value: "true"
-      - key: EMBEDDING_BACKEND     # 무료 등급 메모리(512MB)에 맞춰 Gemini 임베딩 사용(로컬 torch 미사용)
-        value: gemini
-      - key: SEARCH_BACKEND        # 웹 검색(DuckDuckGo, 키 불필요) — 코퍼스 밖 주장도 실제 데이터로 판정
-        value: ddg
       - key: HOST
         value: "0.0.0.0"
       - key: PYTHON_VERSION
         value: "3.12"
-      - key: MAX_CONCURRENCY
-        value: "2"
       - key: GOOGLE_API_KEY        # 임베딩(RAG)용 무료 키 — 대시보드에서 입력(커밋 금지)
         sync: false
       - key: LLM_MODEL             # 모델 ID — 대시보드에서 입력(산출물에 모델명 비노출)

@@ -1,10 +1,4 @@
-"""Node 2: retrieve_evidence (RAG) — 주장별 증거를 회수해 공유 풀에 누적.
-
-LLM 을 쓰지 않아 결정론적이다. 이미 풀에 있는 스니펫은 dedup 하고 신규만 반환하여
-`add` 리듀서가 풀을 누적하게 한다. `prev_pool_size` 를 갱신해 루프 종료 판정을 돕는다.
-"""
-
-from __future__ import annotations
+"""주장별 증거를 회수해 공유 풀에 누적하는 노드(결정론적, LLM 미사용)."""
 
 import logging
 
@@ -34,7 +28,7 @@ def retrieve_evidence(state: FactCheckState) -> dict:
         from ..rag.vectorstore import get_or_build_evidence
 
         store = get_or_build_evidence()
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.warning("증거 벡터스토어 로드 실패: %s", exc)
         store = None
 
@@ -50,11 +44,10 @@ def retrieve_evidence(state: FactCheckState) -> dict:
                 store=store,
                 existing_ids=existing_ids,
             )
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             logger.warning("주장 %d 증거 회수 실패: %s", claim.claim_id, exc)
             items = []
         new_items.extend(items)
 
-    logger.info("신규 증거 %d개 회수(이전 풀 %d개)", len(new_items), prev_size)
-    # evidence_pool 은 add 리듀서 → 신규만 반환. prev_pool_size 는 교체(단일 쓰기).
+    # evidence_pool 은 add 리듀서 → 신규만 반환. prev_pool_size 는 단일 쓰기.
     return {"evidence_pool": new_items, "prev_pool_size": prev_size}

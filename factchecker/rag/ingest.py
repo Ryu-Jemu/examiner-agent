@@ -2,11 +2,7 @@
 
   python -m factchecker.rag.ingest         # 캐시 활용(해시 변경 시에만 재빌드)
   python -m factchecker.rag.ingest --force # 강제 재빌드
-
-그래프 첫 실행 시 lazy 자동 빌드도 되지만, 미리 빌드해 두고 싶을 때 사용한다.
 """
-
-from __future__ import annotations
 
 import argparse
 import sys

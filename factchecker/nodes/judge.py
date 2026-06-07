@@ -1,13 +1,4 @@
-"""Node 4: judge_and_self_refute (판사 + 자가 반박) + 루프 라우팅.
-
-판사가 양측 논거와 근거 사슬을 종합해 5등급 + 보정 신뢰도를 산출하고, 이어 자가
-반박(레드팀)으로 결론을 공격한다. 살아남지 못한 판정 중 증거가 빈약한 것은
-needs_more_evidence=true 로 표시해 추가 검색 루프를 유도한다.
-
-종료 판정(decide_route)은 4개의 독립 조건으로 무한루프·진동을 막는다.
-"""
-
-from __future__ import annotations
+"""판사 노드: 양측 논거를 종합해 5등급 판정 + 자가 반박을 내고, 루프 종료를 결정한다."""
 
 import logging
 
@@ -63,11 +54,7 @@ def decide_route(
     max_loops: int,
     threshold: float,
 ) -> str:
-    """4개 종료 조건. 'retrieve_evidence' 또는 'synthesize' 반환.
-
-    (1) 최대 루프 도달  (2) 판사 만족(추가 증거 불필요)
-    (3) 직전 라운드 대비 신규 증거 없음  (4) 신뢰도 수렴(진동 차단, 2회차부터)
-    """
+    """4개 종료 조건 중 하나라도 참이면 synthesize, 아니면 retrieve_evidence."""
     if loop_count >= max_loops:               # (1) 하드 캡
         return "synthesize"
     if not verdicts:                          # 판정 없음 → 더 할 게 없음
@@ -92,7 +79,7 @@ def judge(state: FactCheckState) -> dict:
 
     checkable = [c for c in claims if c.checkable]
 
-    # --- 판정 + 자가 반박 (한 번의 LLM 호출로 동시 산출 → 비용 절약) ---
+    # 판정 + 자가 반박을 한 번의 LLM 호출로 동시 산출(비용 절약)
     if checkable:
         judge_prompt = prompts.render(
             "judge",
@@ -146,10 +133,6 @@ def judge(state: FactCheckState) -> dict:
         threshold=settings.confidence_delta_threshold,
     )
 
-    logger.info(
-        "판정 %d건, 자가반박 %d건, loop=%d→%d, 라우팅=%s",
-        len(verdicts), len(refutations), loop, new_loop, decision,
-    )
     return {
         "verdicts": verdicts,                 # 교체(단일 쓰기)
         "refutation_log": refutations,        # add 리듀서

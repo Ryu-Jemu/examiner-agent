@@ -1,13 +1,4 @@
-"""Chroma 벡터스토어 빌드/로드 (멱등).
-
-설계 원칙(재현성):
-- 인덱스(.chroma/)는 커밋하지 않는다. 소스 JSON만 커밋하고 로컬에서 재빌드한다.
-- 소스 JSON의 콘텐츠 해시를 매니페스트에 저장해, 해시가 같으면 로드·다르면 재빌드한다.
-- 스니펫 1개 = Document 1개(snippet_id ↔ Document 1:1) → "실제 id만 인용" 가드의 전제.
-- 명시적 ids 로 결정론적 upsert, MMR 등 랜덤성 없는 similarity_search 사용.
-"""
-
-from __future__ import annotations
+"""Chroma 벡터스토어 빌드/로드(멱등). 소스 JSON 해시가 같으면 로드, 다르면 재빌드한다."""
 
 import hashlib
 import json
@@ -21,9 +12,8 @@ from ..config import get_settings
 
 logger = logging.getLogger("factchecker.rag.vectorstore")
 
-# 인덱스 로드/빌드 직렬화 락. 병렬 분기(retrieve_evidence ↔ tag_techniques)가 같은
-# chromadb 클라이언트를 동시에 처음 생성·접근하면 rust 바인딩 경합('RustBindingsAPI'
-# ...)이 나며 로드가 실패→매 실행 재임베딩된다. 로드/빌드를 직렬화해 이를 막는다.
+# 로드/빌드 직렬화 락. 병렬 분기가 같은 chromadb 클라이언트를 동시에 생성하면 경합으로
+# 로드가 실패해 매 실행 재임베딩되므로, 로드/빌드를 직렬화한다.
 _BUILD_LOCK = threading.RLock()
 
 EVIDENCE_COLLECTION = "evidence"
@@ -41,12 +31,7 @@ def _is_rate_limit_text(s: str) -> bool:
 
 @lru_cache(maxsize=4)
 def _get_client(persist: str):
-    """경로별 단일 PersistentClient(프로세스 내 공유).
-
-    두 컬렉션(evidence/techniques)이 같은 경로에 각자 클라이언트를 만들면(특히 병렬
-    분기에서) chromadb rust 바인딩이 충돌해 로드가 실패하고 매 실행마다 전체 재임베딩이
-    발생한다. 단일 클라이언트를 공유해 cross-process 로드를 안정화한다.
-    """
+    # 경로별로 PersistentClient 를 하나만 공유한다(컬렉션마다 만들면 경합).
     import chromadb
 
     Path(persist).mkdir(parents=True, exist_ok=True)
@@ -58,13 +43,8 @@ def _content_hash(path: Path) -> str:
 
 
 def _embedding_id(settings) -> str:
-    """임베딩 백엔드+모델 식별자(벡터 차원이 바뀌는 축). 매니페스트에 함께 저장해
-    백엔드 전환 시 차원 불일치를 막는다."""
-    if settings.embedding_backend == "hf":
-        base = f"hf:{settings.hf_embedding_model}"
-    else:
-        base = f"gemini:{settings.gemini_embedding_model}"
-    return base + "|cosine"  # 거리 메트릭도 식별자에 포함(변경 시 자동 재빌드)
+    # 임베딩 모델+거리 메트릭 식별자. 모델이 바뀌면(차원 변경) 매니페스트로 재빌드를 유도.
+    return f"gemini:{settings.gemini_embedding_model}|cosine"
 
 
 def _read_manifest(chroma_dir: Path) -> dict[str, str]:
@@ -146,8 +126,8 @@ def _build_collection(
     if reset:
         try:
             client.delete_collection(collection)
-            logger.info("컬렉션 '%s' 초기화(임베딩 백엔드/차원 변경 또는 force)", collection)
-        except Exception as exc:  # noqa: BLE001
+            logger.info("컬렉션 '%s' 초기화(차원 변경 또는 force)", collection)
+        except Exception as exc:
             logger.debug("컬렉션 삭제 생략(%s): %s", collection, exc)
     store = Chroma(
         collection_name=collection, embedding_function=embeddings, client=client,
@@ -165,7 +145,7 @@ def _build_collection(
                 store.add_documents(cdocs, ids=cids)
                 added += len(cdocs)
                 break
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:
                 if _is_rate_limit_text(str(exc)) and attempt < 5:
                     wait = min(60, 5 * (2 ** attempt))
                     logger.warning(
@@ -175,7 +155,6 @@ def _build_collection(
                     time.sleep(wait)
                     continue
                 raise
-    logger.info("컬렉션 '%s' 빌드 완료: %d개 문서", collection, added)
     return store
 
 
@@ -190,8 +169,7 @@ def _load_collection(*, collection: str, chroma_dir: Path, embeddings):
 
 
 def _get_or_build(**kwargs):
-    """로드/빌드를 프로세스 내 락으로 직렬화(병렬 분기의 chromadb 클라이언트 경합 방지)."""
-    with _BUILD_LOCK:
+    with _BUILD_LOCK:  # 병렬 분기의 chromadb 경합 방지
         return _get_or_build_impl(**kwargs)
 
 
@@ -224,14 +202,13 @@ def _get_or_build_impl(
             store = _load_collection(
                 collection=collection, chroma_dir=chroma_dir, embeddings=embeddings
             )
-            count = store._collection.count()  # noqa: SLF001 (임베딩 호출 없음)
-            if count == expected:  # 부분/빈 인덱스는 거부하고 재빌드(임베딩 절약·정확성)
-                logger.info("컬렉션 '%s' 캐시 로드(해시 일치, %d개)", collection, count)
+            count = store._collection.count()  # noqa: SLF001
+            if count == expected:  # 부분/빈 인덱스는 거부하고 재빌드
                 return store
             logger.warning(
                 "컬렉션 '%s' 개수 불일치(%d != %d) → 재빌드", collection, count, expected
             )
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             logger.warning("캐시 로드 실패(%s) → 재빌드: %s", collection, exc)
 
     if backend_changed:
