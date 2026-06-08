@@ -19,21 +19,21 @@ flowchart TD
     EX --> RE[retrieve_evidence<br/>증거 검색 RAG]
     EX --> TT[tag_techniques<br/>조작 기법 태깅 RAG · 병렬]
     RE --> AD[adversarial_debate<br/>검사 ⇄ 변호]
-    AD --> JU[judge_and_self_refute<br/>판사 + 자가 반박]
+    AD --> JU[judge<br/>판사 + 자가 반박]
     JU -->|증거 부족| RE
     JU -->|통과| SY[synthesize<br/>최종 리포트]
     TT --> SY
     SY --> END([END])
 ```
 
-- **6개 노드**: `extract_claims → retrieve_evidence → adversarial_debate → judge_and_self_refute → (루프 or) synthesize`, 그리고 `tag_techniques`는 병렬 분기.
+- **6개 노드**: `extract_claims → retrieve_evidence → adversarial_debate → judge → (루프 or) synthesize`, 그리고 `tag_techniques`는 병렬 분기.
 - **멀티에이전트**: 검사 / 변호 / 판사 / 기법 태거 / 반론 작성(코치) — 한 LLM에 역할별 시스템 프롬프트로 구현.
-- **자가 반박 루프**: 판사가 증거 부족이라 판단하면 `retrieve_evidence`로 되돌아가며, 4가지 종료 조건(최대 루프·판사 만족·신규 증거 없음·신뢰도 수렴)으로 무한루프/진동을 막습니다.
+- **자가 반박 루프**: 판사가 증거 부족이라 판단하면 `retrieve_evidence`로 되돌아가며, 4가지 핵심 종료 조건(최대 루프·판사 만족·신규 증거 없음·신뢰도 수렴)으로 무한루프/진동을 막습니다.
 
 ## 2. 안전 설계 (환각·오판 방지)
 
 - 검사·변호는 **실제 회수된 스니펫만 인용**하도록 프롬프트로 강제하고, **코드 레벨에서 지어낸 인용 id를 제거**합니다(이중 방어).
-- 판사는 출처 없는·신뢰도 낮은 주장을 **감점**하고, **"불충분(판단 불가)"** 를 정식 결론으로 허용합니다.
+- 판사는 출처 없는·신뢰도 낮은 주장을 **감점**하고, **"불충분(판단 불가)"** 를 정식 결론으로 허용합니다(프롬프트 유도).
 - 출력은 단정 라벨이 아니라 **5단계 신뢰도 등급**(사실 / 대체로 사실 / 불충분 / 대체로 거짓 / 거짓·오도)입니다.
 - 최종 리포트의 핵심 수치(종합 등급·근거 출처)는 **Python에서 결정론적으로 계산**하고, LLM은 자연어 반론 카드만 작성합니다.
 
@@ -41,10 +41,9 @@ flowchart TD
 
 ## 3. 설치 (조교/채점자 안내)
 
-> **요구사항**: Python **3.12** 권장(3.11~3.13 지원), 인터넷 연결, 그리고 키 2개 —
+> **요구사항**: Python **3.12** 권장(3.11~3.13), 인터넷 연결, 그리고 키 2개 —
 > 채팅용 **외부 LLM API 키**(`LLM_API_KEY`)와 **임베딩용 Gemini 키**(`GOOGLE_API_KEY`).
 > 본 에이전트는 채팅은 외부 LLM, 임베딩(RAG)은 Gemini 를 쓰는 **하이브리드** 구성입니다.
-> Google 키 없이 쓰려면 `EMBEDDING_BACKEND=hf`(로컬 임베딩, torch 설치)로 바꾸세요.
 
 ```bash
 # 1) 가상환경 생성 및 활성화
@@ -58,7 +57,7 @@ pip install -e .                   # factchecker 패키지 설치(개발 모드)
 # 3) 환경변수 설정 — .env 생성 후 키 입력
 cp .env.example .env               # Windows: copy .env.example .env
 #   .env 를 열어 LLM_API_KEY(채팅용 외부 LLM 키)와 LLM_MODEL(제공받은 모델 ID)을 입력하세요.
-#   임베딩용 GOOGLE_API_KEY 도 채우세요(또는 EMBEDDING_BACKEND=hf 로 전환).
+#   임베딩용 GOOGLE_API_KEY 도 채우세요.
 ```
 
 > ⚠️ **제출본의 `.env.example` 에는 키가 `YOUR-API-KEY-HERE` 로 비워져 있습니다.**
@@ -72,7 +71,7 @@ cp .env.example .env               # Windows: copy .env.example .env
 > 레이트리밋(429/529) 시 자동 백오프 재시도하며, 필요하면 `LLM_THROTTLE_SECONDS` 로
 > 호출 간격을 둘 수 있습니다.
 > **Gemini 임베딩 무료 등급 주의:** 임베딩 키의 무료 등급은 일일 요청 한도가 있을 수
-> 있으니, 대량 평가는 한도가 넉넉한 키에서 실행하세요.
+> 있으니, 대량 시연은 한도가 넉넉한 키에서 실행하세요.
 
 ### (선택) 인덱스 미리 빌드
 첫 실행 시 자동으로 빌드되지만, 미리 만들고 싶다면:
@@ -87,107 +86,83 @@ python -m factchecker.rag.ingest --force  # 강제 재빌드
 
 ## 4. 실행
 
+> 🌐 **설치 없이 바로 체험:** **https://factchecker-nlvz.onrender.com/** (Render 상시 배포,
+> **BYOK** — 화면 상단에 본인의 외부 LLM API 키 입력 시 동작, 키는 서버 미저장. 무료 등급이라
+> 첫 접속 시 콜드 스타트로 수십 초가 걸릴 수 있습니다.)
+
 ```bash
-# ★ 라이브 웹 앱 (백엔드 연결) — 임의 주장을 실시간으로 RAG+LangGraph 검증
+# 라이브 웹 앱 (FastAPI 백엔드 + 프런트엔드) — 임의 주장을 실시간으로 RAG+LangGraph 검증
 python server.py          # → 브라우저에서 http://127.0.0.1:8000 접속
 #   입력창에 아무 루머나 입력 → 실제 에이전트가 증거 수집·판정·반론 카드 생성.
 #   API 키는 서버 측 .env 에서만 사용(HTML/브라우저로 전달되지 않음).
-
-# 웹 UI (Gradio) — 동일 기능의 대안 UI (Gradio 는 선택 설치: pip install -e ".[ui]")
-python app.py
-
-# 헤드리스 CLI
-python cli.py "충격! 백신 맞으면 자석이 붙는대요. 빨리 공유하세요!"
-echo "사람은 뇌의 10%만 쓴다" | python cli.py --stdin
 ```
 
-> **시각화 자료 2종:** ① `demo.html` — 백엔드 없이 열리는 **정적** 발표/스크린샷용
-> (미리 실행한 예시 결과). ② `python server.py` + `web/index.html` — **백엔드 연결
-> 라이브 앱**(임의 입력 실시간 검증). 보고서 `REPORT.md` 의 실행 예시와 동일한 산출물.
+코드에서 직접 호출하려면:
+```python
+from factchecker.runner import run_factcheck
+report = run_factcheck("충격! 백신 맞으면 자석이 붙는대요. 빨리 공유하세요!")
+print(report.overall_grade, report.overall_confidence)
+print(report.rebuttal_card)
+```
 
 > **외부 배포:** 채점자·외부 사용자가 접속하도록 서버를 공개하려면 **[DEPLOY.md](DEPLOY.md)**
-> 참고(단일 서버 / Docker / Render Blueprint / 임시 터널 단계별, 키 비노출·동시성·HTTPS·헬스체크 포함).
-> Render 상시 배포는 **BYOK**(`ALLOW_USER_KEY=true`) — 서버에 LLM 키를 두지 않고 사용자가
-> 화면에서 자기 키를 입력하므로 소유자 키로 비용이 발생하지 않는다(`render.yaml` 포함).
-
-> **임베딩 백엔드 안내:** 기본은 Gemini 임베딩(`EMBEDDING_BACKEND=gemini`, `GOOGLE_API_KEY`
-> 필요)입니다. Gemini 무료 등급 임베딩 일일 한도가 소진된 경우, 로컬 임베딩으로 즉시
-> 동작시킬 수 있습니다:
-> ```bash
-> pip install -e ".[local-embed]"     # langchain-huggingface + sentence-transformers
-> # .env 에서: EMBEDDING_BACKEND=hf
-> ```
-
-## 5. 평가 재현
-
-```bash
-python -m eval.harness            # 12개 테스트셋 실행 + 지표 표 출력
-python -m eval.harness --runs 2   # 2회 실행하여 판정 라벨 안정성(결정론) 점검
-```
-지표: **판정 정확도**(5등급 정확/±1등급 관대, "불충분" 정답 포함), **기법 태깅 F1**,
-**신뢰도 보정**(자신 있게 틀린 비율 + ECE). 평가는 항상 로컬 코퍼스만 사용해 재현 가능합니다.
-
-## 6. 테스트
-
-```bash
-pytest            # 네트워크/실제 키 없이 동작(가짜 임베딩·모킹)
-```
+> 참고(단일 서버 / Docker / Render Blueprint / 임시 터널 단계별, 키 비노출·HTTPS·헬스체크 포함).
+> Render 상시 배포는 **BYOK**(`ALLOW_USER_KEY=true`) — 서버에 채팅 LLM 키를 두지 않고 사용자가
+> 화면에서 자기 키를 입력하므로 소유자 키로 비용이 발생하지 않습니다(`render.yaml` 포함).
 
 ---
 
-## 7. 환경변수 (`.env`)
+## 5. 환경변수 (`.env`)
+
+`.env.example` 의 변수는 `factchecker/config.py`(그래프)와 `server.py`(웹 서버)가 실제로 읽는
+값과 일치합니다.
 
 | 변수 | 기본값 | 설명 |
 |---|---|---|
-| `LLM_API_KEY` | `YOUR-API-KEY-HERE` | **필수.** 채팅용 외부 LLM API 키 |
+| `LLM_API_KEY` | `YOUR-API-KEY-HERE` | **필수**(BYOK 시 생략 가능). 채팅용 외부 LLM API 키 |
 | `LLM_MODEL` | (빈값) | **필수.** 사용할 LLM 모델 ID(제공받은 값 입력) |
 | `LLM_MAX_TOKENS` | `4096` | LLM 응답 최대 토큰 |
-| `GOOGLE_API_KEY` | `YOUR-API-KEY-HERE` | `EMBEDDING_BACKEND=gemini`(기본) 일 때 필수 — 임베딩용 |
-| `EMBEDDING_BACKEND` | `gemini` | `gemini`(기본, GOOGLE_API_KEY 필요) / `hf`(로컬, 키 불필요) |
+| `ALLOW_USER_KEY` | `false` | BYOK 모드 — 사용자가 요청마다 키 입력(서버 키 불필요) |
+| `GOOGLE_API_KEY` | `YOUR-API-KEY-HERE` | **필수.** 임베딩(Gemini)용 키 |
 | `GEMINI_EMBEDDING_MODEL` | `models/gemini-embedding-001` | Gemini 임베딩 모델 |
-| `HF_EMBEDDING_MODEL` | `BAAI/bge-m3` | `EMBEDDING_BACKEND=hf` 일 때 사용 |
-| `LLM_THROTTLE_SECONDS` | `0` | LLM 호출 간 최소 간격(초). 레이트리밋 잦으면 4~6 |
-| `LLM_MAX_ATTEMPTS` | `5` | 레이트리밋(429/529) 시 지수 백오프 재시도 횟수 |
-| `SEARCH_BACKEND` | `local` | `local`(재현 가능) / `ddg`(DuckDuckGo, 키 불필요) / `tavily`(키 필요) |
-| `TAVILY_API_KEY` | (빈값) | `SEARCH_BACKEND=tavily` 일 때만 |
 | `MAX_LOOPS` | `2` | 판사→검색 최대 루프 |
 | `RETRIEVE_K` | `3` | 주장당 회수 스니펫 수(작을수록 토큰 절약) |
+| `RETRIEVE_MIN_RELEVANCE` | `0.32` | 코사인 관련성 임계값(이하 스니펫 제외) |
 | `CONFIDENCE_DELTA_THRESHOLD` | `0.05` | 신뢰도 수렴 종료 임계값 |
 | `MAX_CLAIMS` | `2` | 한 입력에서 검증할 최대 주장 수(비용 상한) |
+| `LLM_THROTTLE_SECONDS` | `0` | LLM 호출 간 최소 간격(초). 레이트리밋 잦으면 4~6 |
+| `LLM_MAX_ATTEMPTS` | `5` | 레이트리밋(429/529) 시 지수 백오프 재시도 횟수 |
 | `CHROMA_DIR` | (빈값→`data/.chroma`) | 인덱스 저장 경로 |
-
-### (선택) 라이브 웹 검색 / 로컬 임베딩
-- **DuckDuckGo**(키 불필요): `pip install ddgs` 후 `.env` 에 `SEARCH_BACKEND=ddg`.
-- **로컬 임베딩**(오프라인): `pip install langchain-huggingface sentence-transformers` 후 `EMBEDDING_BACKEND=hf`. (모델 다운로드 수백 MB)
+| `HOST` / `PORT` | `127.0.0.1` / `8000` | 서버 바인드 주소/포트(`server.py`) |
+| `MAX_INPUT_CHARS` | `2000` | 입력 길이 상한(`server.py`) |
+| `CORS_ORIGINS` | (없음) | 프런트를 다른 도메인에서 서빙할 때만 콤마로 허용 출처 지정(`server.py`) |
 
 ---
 
-## 8. 프로젝트 구조
+## 6. 프로젝트 구조
 
-```
+```text
 factchecker/            # 백엔드 패키지 (저장소 루트, flat layout)
   config.py             # 환경변수/키 검증
   models.py state.py    # Pydantic 스키마 / LangGraph State(리듀서)
   llm.py                # 외부 LLM·임베딩 팩토리 + 안전한 구조화 출력
-  prompts/              # 역할별 프롬프트 템플릿(.txt)
-  rag/                  # 벡터스토어·인제스트·증거/기법 회수·웹검색(선택)
+  prompts/              # 역할별 프롬프트 템플릿(.txt 6종)
+  rag/                  # 벡터스토어·인제스트·증거/기법 회수
   nodes/                # 6개 노드 + 라우팅
   graph.py runner.py    # 그래프 조립 / 실행 API
-data/                   # 증거 코퍼스 · 기법 라이브러리 · 테스트셋(소스 JSON)
-eval/                   # 평가 하니스 + 지표
-tests/                  # 단위 테스트(키/네트워크 불필요)
-server.py web/index.html# ★ 라이브 웹 앱(FastAPI 백엔드 + 프런트엔드)
-app.py cli.py           # Gradio UI / CLI 진입점
-demo.html               # 정적 발표용 시각화(백엔드 없음, 예시 결과)
+data/                   # 증거 코퍼스(corpus.json) · 기법 라이브러리(techniques.json)
+server.py               # ★ FastAPI 라이브 웹앱 진입점(python server.py)
+web/index.html          # ★ 프런트엔드(파이프라인 시각화 + 예시 칩, BYOK 키 입력)
+render.yaml Dockerfile  # 배포(Render Blueprint / 컨테이너)
 ```
 
-## 9. 범위 / 한계
+## 7. 범위 / 한계
 
-- **포함(MVP+핵심)**: 주장 추출 · 증거 RAG · 적대적 검증 · 자가 반박 루프 · 조작 기법 태깅(4종) · 보정 신뢰도 + 근거 사슬 · 반론 카드 · Gradio UI · 평가.
-- **제외**: AI 생성 콘텐츠 탐지 · 루머 계보 추적 · 이미지/딥페이크 검증 · (스트레치) 검증 메모리.
-- 번들 코퍼스는 데모/평가용 소형 지식베이스입니다(`data/evidence_corpus/SOURCES.md` 참고). 실제 운용 시 라이브 웹 검색을 병행할 수 있습니다.
+- **포함(MVP+핵심)**: 주장 추출 · 증거 RAG · 적대적 검증 · 자가 반박 루프 · 조작 기법 태깅(4종) · 보정 신뢰도 + 근거 사슬 · 반론 카드 · 라이브 웹앱(FastAPI).
+- **제외**: 자동 평가 하니스/단위 테스트 · 라이브 웹 검색 · AI 생성 콘텐츠 탐지 · 루머 계보 추적 · 이미지/딥페이크 검증 · (스트레치) 검증 메모리.
+- 번들 코퍼스(증거 32 스니펫 · 기법 4종)는 데모/시연용 소형 지식베이스입니다(`data/evidence_corpus/SOURCES.md` 참고).
 
-## 10. 제출(submission) 시 주의 — API 키 유출 방지
+## 8. 제출(submission) 시 주의 — API 키 유출 방지
 
 `.gitignore` 는 **git 커밋**에서만 `.env` 를 제외합니다. 폴더를 통째로 zip 으로 제출하면
 `.gitignore` 가 적용되지 않아 `.env` 의 실제 키가 함께 유출될 수 있습니다. 제출 전에:
@@ -200,5 +175,5 @@ zip -r submission.zip . -x '.env' -x '.venv/*' -x 'data/.chroma/*' -x '.git/*' -
 - 제출 전 `.env` 의 키를 `YOUR-API-KEY-HERE` 로 비우거나 `.env` 를 삭제하세요(`.env.example` 만 남김).
 - 로컬 검증에 사용한 키는 **폐기(rotate)** 후 새 키를 발급받는 것을 권장합니다.
 
-## 11. 라이선스
+## 9. 라이선스
 MIT (교육용 프로젝트)

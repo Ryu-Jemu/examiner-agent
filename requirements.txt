@@ -2,8 +2,7 @@
 # 로컬에서 검증된 Python 3.12 호환 버전 묶음(전이 의존성까지 고정).
 #
 # 설치:   pip install -r requirements.txt && pip install -e .
-# 선택:   Gradio UI(app.py)  → pip install -e ".[ui]"
-#         로컬 임베딩(hf)     → pip install -e ".[local-embed]"
+# 실행:   python server.py   → http://127.0.0.1:8000 (라이브 웹앱)
 #
 # 갱신 시: 깨끗한 venv 에 설치 후 동일 방식으로 재고정(버전을 임의로 풀지 말 것).
 
