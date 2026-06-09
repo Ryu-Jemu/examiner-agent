@@ -1,4 +1,4 @@
-"""단톡방 루머 적대적 팩트체커 — LangGraph 멀티에이전트 패키지."""
+"""Rumor Verification Agent — LangGraph 멀티에이전트 패키지."""
 
 __version__ = "0.1.0"
 

@@ -1,4 +1,4 @@
-# 🕵️ 단톡방 루머 적대적 팩트체커 + 미디어 리터러시 코치
+# Rumor Verification Agent
 
 > 클라우드AI프로그래밍 기말 프로젝트 · LangChain / **LangGraph** 멀티에이전트 + RAG · 채팅은 **외부 LLM**, 임베딩은 **Gemini** (하이브리드)
 

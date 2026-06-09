@@ -28,7 +28,7 @@ def _int_env(name: str, default: int) -> int:
 
 _MAX_INPUT_CHARS = _int_env("MAX_INPUT_CHARS", 2000)
 
-app = FastAPI(title="단톡방 루머 적대적 팩트체커", version="0.1.0")
+app = FastAPI(title="Rumor Verification Agent", version="0.1.0")
 
 _cors_raw = os.getenv("CORS_ORIGINS", "")
 _cors = [o.strip() for o in _cors_raw.split(",") if o.strip()]
