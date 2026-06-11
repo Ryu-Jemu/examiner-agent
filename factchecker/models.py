@@ -34,6 +34,12 @@ class TechniqueTagName(str, Enum):
     FALSE_DICHOTOMY = "거짓 이분법"
 
 
+# 증거 스탠스: 어느 측 리서처(검사/변호)의 검색 쿼리로 회수됐는가.
+# 양측 쿼리에 모두 걸리면 "both", 과거 데이터·중립 회수는 None(양측 공용 취급).
+STANCE_PROSECUTION = "prosecution"
+STANCE_DEFENSE = "defense"
+STANCE_BOTH = "both"
+
 # 출처 유형 → 신뢰도(결정론적 매핑; retrieve_evidence 에서 사용)
 SOURCE_CREDIBILITY: dict[SourceType, float] = {
     SourceType.GOV: 0.90,
@@ -83,7 +89,19 @@ class ArgumentPair(BaseModel):
     claim_id: int
     loop: int
     prosecution: SideArgument  # 검사 (거짓·오도 입증)
-    defense: SideArgument      # 변호 (참 입증)
+    defense: SideArgument      # 변호 (참 입증, 검사 논거를 읽고 반박)
+    prosecution_rebuttal: SideArgument | None = None  # 검사 재반박(3턴째)
+
+
+class DebateTurn(BaseModel):
+    """법정 대화 한 턴(프런트 대화창·판사 입력에 사용)."""
+
+    claim_id: int  # 시스템(판사) 턴은 -1
+    loop: int
+    turn: int      # 라운드 내 발언 순서(0부터)
+    role: str      # "검사" | "변호" | "판사"
+    text: str
+    cited_snippet_ids: list[str] = Field(default_factory=list)
 
 
 class Verdict(BaseModel):
@@ -141,6 +159,7 @@ class ClaimBreakdown(BaseModel):
     confidence: float = Field(ge=0.0, le=1.0)
     supporting_sources: list[str] = Field(default_factory=list)
     refuting_sources: list[str] = Field(default_factory=list)
+    self_refutation: str = ""  # 판사의 자가 반박(투명성 노출용)
 
 
 class FinalReport(BaseModel):

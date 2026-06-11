@@ -27,6 +27,9 @@ def _int_env(name: str, default: int) -> int:
 
 
 _MAX_INPUT_CHARS = _int_env("MAX_INPUT_CHARS", 2000)
+# 첨부 이미지(data URL) 길이 상한 — 프런트가 1024px/JPEG 로 다운스케일해
+# 보내므로 평소 수백 KB 수준. 비정상 페이로드만 차단한다.
+_MAX_IMAGE_CHARS = _int_env("MAX_IMAGE_CHARS", 1_400_000)
 
 app = FastAPI(title="Rumor Verification Agent", version="0.1.0")
 
@@ -47,6 +50,7 @@ class CheckRequest(BaseModel):
     # 길이/공백 검증은 핸들러에서 처리해 일관된 {"error": ...} JSON 으로 응답한다.
     text: str = ""
     api_key: str | None = None  # BYOK: 사용자가 입력한 외부 LLM API 키
+    image_base64: str | None = None  # 첨부 이미지(data:image/...;base64,...)
 
 
 def _allow_user_key() -> bool:
@@ -77,8 +81,23 @@ def config() -> dict:
 @app.post("/api/factcheck")
 def factcheck(req: CheckRequest):
     text = req.text.strip()
-    if not text:
-        return JSONResponse({"error": "검증할 텍스트를 입력하세요."}, status_code=400)
+    image = (req.image_base64 or "").strip() or None
+    if image:
+        if not image.startswith("data:image/"):
+            return JSONResponse(
+                {"error": "이미지 형식이 올바르지 않습니다(data URL 필요)."},
+                status_code=400,
+            )
+        if len(image) > _MAX_IMAGE_CHARS:
+            return JSONResponse(
+                {"error": "이미지가 너무 큽니다. 더 작은 이미지로 시도해 주세요."},
+                status_code=413,
+            )
+    if not text and not image:
+        return JSONResponse(
+            {"error": "검증할 텍스트를 입력하거나 이미지를 첨부하세요."},
+            status_code=400,
+        )
     if len(text) > _MAX_INPUT_CHARS:
         return JSONResponse(
             {"error": f"입력이 너무 깁니다(최대 {_MAX_INPUT_CHARS}자)."}, status_code=413
@@ -99,9 +118,17 @@ def factcheck(req: CheckRequest):
     from factchecker.config import ConfigError
 
     try:
-        from factchecker.runner import run_factcheck
+        from factchecker.runner import report_from_state, run_factcheck_state
 
-        payload = run_factcheck(text, api_key=user_key).model_dump(mode="json")
+        final_state = run_factcheck_state(
+            text, api_key=user_key, image_data_url=image
+        )
+        payload = report_from_state(final_state).model_dump(mode="json")
+        # 법정 대화 기록(검사·변호 3턴 + 판사 시스템 턴) — 프런트 대화창용
+        payload["debate_transcript"] = [
+            t.model_dump(mode="json")
+            for t in (final_state.get("debate_transcript") or [])
+        ]
     except ConfigError as exc:
         return JSONResponse({"error": str(exc)}, status_code=400)
     except Exception:
@@ -120,7 +147,8 @@ def main() -> None:
     import uvicorn
 
     logging.basicConfig(
-        level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s"
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
     )
     host = os.getenv("HOST", "127.0.0.1")
     port = _int_env("PORT", 8000)

@@ -82,10 +82,14 @@ def _build_breakdown(
         supporting, refuting = [], []
         if ap:
             supporting = [
-                _source_label(by_id[s]) for s in ap.defense.cited_snippet_ids if s in by_id
+                _source_label(by_id[s])
+                for s in ap.defense.cited_snippet_ids
+                if s in by_id
             ]
             refuting = [
-                _source_label(by_id[s]) for s in ap.prosecution.cited_snippet_ids if s in by_id
+                _source_label(by_id[s])
+                for s in ap.prosecution.cited_snippet_ids
+                if s in by_id
             ]
         breakdowns.append(
             ClaimBreakdown(
@@ -95,13 +99,16 @@ def _build_breakdown(
                 confidence=v.confidence,
                 supporting_sources=sorted(set(supporting)),
                 refuting_sources=sorted(set(refuting)),
+                self_refutation=v.self_refutation,
             )
         )
     return breakdowns
 
 
 def _format_report_block(
-    overall: VerdictLabel, breakdowns: list[ClaimBreakdown], tags: list[TechniqueTag]
+    overall: VerdictLabel,
+    breakdowns: list[ClaimBreakdown],
+    tags: list[TechniqueTag],
 ) -> str:
     lines = [f"종합 등급: {overall.value}"]
     for b in breakdowns:
@@ -127,7 +134,9 @@ def synthesize(state: FactCheckState) -> dict:
     breakdowns = _build_breakdown(claims, verdicts, arguments, pool)
 
     if verdicts:
-        avg_truth = sum(_TRUTH_SCORE[v.label] for v in verdicts) / len(verdicts)
+        avg_truth = (
+            sum(_TRUTH_SCORE[v.label] for v in verdicts) / len(verdicts)
+        )
         overall = _score_to_label(avg_truth)
         overall_conf = sum(v.confidence for v in verdicts) / len(verdicts)
     else:

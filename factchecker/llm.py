@@ -115,12 +115,17 @@ def get_embeddings():
 
 
 def structured_invoke(
-    prompt: str,
+    prompt,
     schema: Type[T],
     *,
     default: T,
 ) -> T:
-    """schema 로 구조화 응답을 받고, 실패 시 default 반환. 레이트리밋은 백오프 재시도."""
+    """schema 로 구조화 응답을 받고, 실패 시 default 반환.
+
+    레이트리밋은 백오프 재시도. prompt 는 str 또는 LangChain 메시지
+    리스트를 받는다(멀티모달 입력은 HumanMessage(content=[텍스트 블록,
+    이미지 블록]) 형태로 전달).
+    """
     max_attempts = max(1, get_settings().llm_max_attempts)
     for attempt in range(max_attempts):
         try:

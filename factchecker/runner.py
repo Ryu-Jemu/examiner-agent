@@ -22,15 +22,19 @@ def run_factcheck_state(
     graph=None,
     recursion_limit: int | None = None,
     api_key: str | None = None,
+    image_data_url: str | None = None,
 ) -> FactCheckState:
     """그래프를 실행해 최종 State 를 반환한다. api_key(BYOK)는 invoke 전에 요청
-    범위로 설정해야 병렬 노드 워커로 컨텍스트가 전파된다."""
+    범위로 설정해야 병렬 노드 워커로 컨텍스트가 전파된다.
+    image_data_url 은 첨부 이미지(data:image/...;base64,...) — 멀티모달 입력."""
     from .llm import reset_request_api_key, set_request_api_key
 
     settings = get_settings()
     graph = graph or _get_compiled()
     rl = recursion_limit or (settings.max_loops * 6 + 10)
     initial: FactCheckState = {"input_text": text or ""}
+    if image_data_url:
+        initial["input_image"] = image_data_url
 
     token = set_request_api_key(api_key) if api_key else None
     try:
@@ -40,17 +44,8 @@ def run_factcheck_state(
             reset_request_api_key(token)
 
 
-def run_factcheck(
-    text: str,
-    *,
-    graph=None,
-    recursion_limit: int | None = None,
-    api_key: str | None = None,
-) -> FinalReport:
-    """그래프를 실행해 최종 리포트(FinalReport)를 반환한다."""
-    final_state = run_factcheck_state(
-        text, graph=graph, recursion_limit=recursion_limit, api_key=api_key
-    )
+def report_from_state(final_state: FactCheckState) -> FinalReport:
+    """최종 State 에서 리포트를 꺼낸다(없으면 안전 폴백)."""
     report = final_state.get("final_report")
     if report is None:
         # 그래프가 리포트를 만들지 못한 극단적 상황의 안전 폴백
@@ -64,3 +59,22 @@ def run_factcheck(
             rebuttal_card="검증 결과를 생성하지 못했습니다. 입력을 확인해 주세요.",
         )
     return report
+
+
+def run_factcheck(
+    text: str,
+    *,
+    graph=None,
+    recursion_limit: int | None = None,
+    api_key: str | None = None,
+    image_data_url: str | None = None,
+) -> FinalReport:
+    """그래프를 실행해 최종 리포트(FinalReport)를 반환한다."""
+    final_state = run_factcheck_state(
+        text,
+        graph=graph,
+        recursion_limit=recursion_limit,
+        api_key=api_key,
+        image_data_url=image_data_url,
+    )
+    return report_from_state(final_state)

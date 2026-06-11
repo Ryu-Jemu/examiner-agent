@@ -1,6 +1,6 @@
 """프롬프트용 블록 포매팅 헬퍼."""
 
-from ..models import ArgumentPair, Claim, EvidenceItem
+from ..models import STANCE_BOTH, ArgumentPair, Claim, EvidenceItem
 
 
 def format_evidence_block(items: list[EvidenceItem]) -> str:
@@ -30,13 +30,36 @@ def format_arguments_block(arguments: list[ArgumentPair]) -> str:
     for ap in arguments:
         pro_ids = ", ".join(ap.prosecution.cited_snippet_ids) or "없음"
         def_ids = ", ".join(ap.defense.cited_snippet_ids) or "없음"
-        lines.append(
+        block = (
             f"[claim_id={ap.claim_id} | loop={ap.loop}]\n"
             f"  검사: {ap.prosecution.summary} (인용: {pro_ids})\n"
             f"  변호: {ap.defense.summary} (인용: {def_ids})"
         )
+        if ap.prosecution_rebuttal is not None:
+            reb_ids = (
+                ", ".join(ap.prosecution_rebuttal.cited_snippet_ids) or "없음"
+            )
+            block += (
+                f"\n  검사 재반박: {ap.prosecution_rebuttal.summary}"
+                f" (인용: {reb_ids})"
+            )
+        lines.append(block)
     return "\n".join(lines)
 
 
-def evidence_for_claim(pool: list[EvidenceItem], claim_id: int) -> list[EvidenceItem]:
+def evidence_for_claim(
+    pool: list[EvidenceItem], claim_id: int
+) -> list[EvidenceItem]:
     return [e for e in pool if e.claim_id == claim_id]
+
+
+def evidence_for_side(
+    pool: list[EvidenceItem], claim_id: int, side: str
+) -> list[EvidenceItem]:
+    """해당 측 리서처 전속 풀: 자기 스탠스 + 양측 공통(both) + 미태깅(하위호환)."""
+    return [
+        e
+        for e in pool
+        if e.claim_id == claim_id
+        and (e.stance in (side, STANCE_BOTH) or e.stance is None)
+    ]

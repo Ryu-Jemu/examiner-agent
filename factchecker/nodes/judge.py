@@ -7,6 +7,7 @@ from ..config import get_settings
 from ..llm import structured_invoke
 from ..models import (
     Claim,
+    DebateTurn,
     EvidenceItem,
     RefutationEntry,
     Verdict,
@@ -120,7 +121,9 @@ def judge(state: FactCheckState) -> dict:
 
     new_loop = loop + 1
     avg_conf = (
-        sum(v.confidence for v in verdicts) / len(verdicts) if verdicts else 0.0
+        sum(v.confidence for v in verdicts) / len(verdicts)
+        if verdicts
+        else 0.0
     )
     decision = decide_route(
         loop_count=new_loop,
@@ -133,13 +136,25 @@ def judge(state: FactCheckState) -> dict:
         threshold=settings.confidence_delta_threshold,
     )
 
-    return {
+    update = {
         "verdicts": verdicts,                 # 교체(단일 쓰기)
         "refutation_log": refutations,        # add 리듀서
         "loop_count": new_loop,               # 교체(카운터)
         "last_confidence": avg_conf,          # 다음 라운드 비교 기준
         "route_decision": decision,           # 라우터가 읽음
     }
+    if decision == "retrieve_evidence":
+        # 재귀(증거 재요청)를 대화창에 가시화하는 판사 시스템 턴
+        update["debate_transcript"] = [
+            DebateTurn(
+                claim_id=-1, loop=loop, turn=99, role="판사",
+                text=(
+                    "현재 증거로는 판단이 어렵습니다 — 양측 리서처에게 "
+                    f"추가 증거 수집을 지시합니다. (라운드 {new_loop + 1})"
+                ),
+            )
+        ]
+    return update
 
 
 def route_after_judge(state: FactCheckState) -> str:

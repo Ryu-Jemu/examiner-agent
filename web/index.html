@@ -80,6 +80,28 @@
     border-left: 4px solid var(--accent); border-radius: 12px; padding: 16px; margin-top: 8px; position: relative; }
   .copybtn { position: absolute; top: 10px; right: 10px; font-size: .75rem; padding: 4px 10px; border-radius: 8px;
     border: 1px solid var(--line); background: var(--panel2); color: #cdd5f2; cursor: pointer; }
+  .imgrow { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 10px; }
+  .imgpv { display: flex; gap: 8px; align-items: center; border: 1px solid var(--line);
+    background: var(--panel2); border-radius: 10px; padding: 4px 10px 4px 4px; font-size: .82rem; color: #cdd5f2; }
+  .imgpv img { width: 40px; height: 40px; object-fit: cover; border-radius: 7px; display: block; }
+  .imgpv button { border: 0; background: transparent; color: var(--muted); cursor: pointer; font-size: .95rem; }
+  .imgpv button:hover { color: #ffc9c9; }
+  .court summary { cursor: pointer; color: #cdd5f2; font-weight: 600; font-size: .9rem; padding: 4px 0; }
+  .round-sep { text-align: center; color: var(--muted); font-size: .78rem; margin: 12px 0 2px; }
+  .bubblerow { display: flex; margin-top: 10px; }
+  .bubblerow.pro { justify-content: flex-start; }
+  .bubblerow.def { justify-content: flex-end; }
+  .bubble { max-width: 78%; padding: 10px 14px; border-radius: 14px; font-size: .92rem; border: 1px solid var(--line); }
+  .bubble .who { font-size: .75rem; font-weight: 700; margin-bottom: 4px; }
+  .bubble.pro { background: rgba(239,68,68,.10); border-color: #5a2c3a; border-top-left-radius: 4px; }
+  .bubble.pro .who { color: #ff9c9c; }
+  .bubble.def { background: rgba(43,182,115,.10); border-color: #2f6b4f; border-top-right-radius: 4px; }
+  .bubble.def .who { color: #9af0c2; }
+  .bubble .cits { font-size: .74rem; color: var(--muted); margin-top: 6px; }
+  .sysline { text-align: center; color: #ffd79a; font-size: .82rem; margin: 12px 0; padding: 8px 10px;
+    border: 1px dashed #6b4f1f; border-radius: 10px; background: rgba(245,158,11,.07); }
+  .refute { font-size: .82rem; color: var(--muted); margin-top: 8px; border-top: 1px dashed var(--line); padding-top: 8px; }
+  .refute b { color: #ffd79a; }
   .err { background: rgba(239,68,68,.10); border: 1px solid #6b2f2f; border-radius: 12px; padding: 14px; color: #ffc9c9; white-space: pre-wrap; }
   footer { text-align: center; color: var(--muted); font-size: .82rem; margin-top: 26px; }
   code { background: #11142a; border: 1px solid var(--line); border-radius: 6px; padding: 1px 6px; }
@@ -94,12 +116,13 @@
 
   <header class="hero">
     <h1>Rumor Verification Agent</h1>
-    <p class="sub">입력한 주장을 <b>RAG로 증거를 수집</b>하고 <b>검사·변호·판사</b>의 적대적 토론과
-      자가 반박을 거쳐 <b>LangGraph</b>로 실시간 판정합니다.</p>
+    <p class="sub">검사·변호가 <b>각자 전속 리서처</b>로 증거를 수집해 <b>3턴 토론</b>을 벌이고,
+      판사가 자가 반박을 거쳐 <b>LangGraph</b>로 실시간 판정합니다.</p>
     <div class="badges">
       <span class="badge live">● LIVE · 백엔드 연결</span>
       <span class="badge">LangGraph 6노드</span>
-      <span class="badge">RAG</span>
+      <span class="badge">양측 전속 리서처 RAG</span>
+      <span class="badge">검사⇄변호 3턴 토론</span>
       <span class="badge">자가 반박 루프</span>
     </div>
   </header>
@@ -108,6 +131,12 @@
     <h2>🧪 검증 입력</h2>
     <label class="fld" for="inp">검증할 루머·주장을 자유롭게 입력하세요. 아래 예시를 눌러도 됩니다.</label>
     <textarea id="inp" placeholder="예) 충격! 백신 맞으면 몸에 자석이 붙는대요. 빨리 공유하세요!"></textarea>
+    <div class="imgrow">
+      <span class="chip" id="imgBtn">🖼 이미지 첨부 — 카톡 캡처·SNS 짤도 분석</span>
+      <input type="file" id="imgFile" accept="image/*" class="hidden" />
+      <span id="imgPv" class="imgpv hidden"></span>
+      <span class="hint" style="margin:0">입력창에 이미지를 드래그해도 됩니다.</span>
+    </div>
 
     <div id="keyRow" class="hidden">
       <label class="fld" for="apikey">🔑 외부 LLM API 키</label>
@@ -120,7 +149,8 @@
     <div class="ex-label">📌 <b>예시 입력</b> — 클릭하면 해당 문장으로 실시간 검증을 실행합니다.</div>
     <div class="chips" id="chips"></div>
     <div class="runwrap"><button class="run wide" id="runBtn">🔍 검증 실행</button></div>
-    <p class="hint">※ 실제 LangGraph 에이전트가 동작하므로 한 번 검증에 수십 초가 걸릴 수 있습니다.</p>
+    <p class="hint">※ 실제 LangGraph 에이전트가 동작하므로 한 번 검증에 수십 초가 걸릴 수 있습니다.<br/>
+      무료 호스팅 특성상 <b>첫 접속</b>은 서버 기동(콜드 스타트)으로 최대 1분쯤 더 걸릴 수 있습니다.</p>
   </section>
 
   <section class="card hidden" id="pipeCard">
@@ -143,7 +173,7 @@
 const NODES = [
   { ico:"🧩", nm:"주장 추출", role:"extract" },
   { ico:"🔎", nm:"증거 검색", role:"RAG" },
-  { ico:"⚖️", nm:"적대적 토론", role:"검사⇄변호" },
+  { ico:"⚖️", nm:"적대적 토론", role:"검사⇄변호 3턴" },
   { ico:"👩‍⚖️", nm:"판사+자가반박", role:"judge" },
   { ico:"🚩", nm:"기법 태깅", role:"병렬" },
   { ico:"🧾", nm:"종합", role:"synthesize" },
@@ -170,7 +200,43 @@ const KEYSTORE="factchecker_api_key";
 let requireKey=false;
 
 const chipBox=document.getElementById("chips");
-EXAMPLES.forEach(([label,text])=>{ const c=el("span","chip",label); c.onclick=()=>{ inp.value=text; run(); }; chipBox.appendChild(c); });
+EXAMPLES.forEach(([label,text])=>{ const c=el("span","chip",label); c.onclick=()=>{ inp.value=text; clearImage(); run(); }; chipBox.appendChild(c); });
+
+// ── 이미지 첨부(멀티모달): 클라이언트에서 1024px/JPEG 로 다운스케일 후 data URL 전송 ──
+const imgBtn=document.getElementById("imgBtn"), imgFile=document.getElementById("imgFile"), imgPv=document.getElementById("imgPv");
+let attachedImage=null;
+function clearImage(){ attachedImage=null; imgPv.classList.add("hidden"); imgPv.innerHTML=""; }
+function setImage(dataUrl){
+  attachedImage=dataUrl;
+  imgPv.innerHTML=`<img src="${dataUrl}" alt="첨부 이미지" /> 첨부됨 <button title="제거">✕</button>`;
+  imgPv.querySelector("button").onclick=clearImage;
+  imgPv.classList.remove("hidden");
+}
+function loadImage(file){
+  if(!file || !file.type || !file.type.startsWith("image/")){
+    resultCard.classList.remove("hidden");
+    resultEl.innerHTML=`<div class="err">⚠️ 이미지 파일(JPG/PNG 등)만 첨부할 수 있습니다.</div>`;
+    return;
+  }
+  const url=URL.createObjectURL(file); const img=new Image();
+  img.onload=()=>{
+    try{
+      const MAX=1024, sc=Math.min(1, MAX/Math.max(img.width, img.height));
+      const w=Math.max(1,Math.round(img.width*sc)), h=Math.max(1,Math.round(img.height*sc));
+      const cv=document.createElement("canvas"); cv.width=w; cv.height=h;
+      cv.getContext("2d").drawImage(img,0,0,w,h);
+      setImage(cv.toDataURL("image/jpeg",0.85));
+    }finally{ URL.revokeObjectURL(url); }
+  };
+  img.onerror=()=>{ URL.revokeObjectURL(url);
+    resultCard.classList.remove("hidden");
+    resultEl.innerHTML=`<div class="err">⚠️ 이미지를 읽지 못했습니다. 다른 파일로 시도해 주세요.</div>`; };
+  img.src=url;
+}
+imgBtn.onclick=()=>imgFile.click();
+imgFile.onchange=e=>{ const f=e.target.files&&e.target.files[0]; if(f) loadImage(f); imgFile.value=""; };
+inp.addEventListener("dragover",e=>{ e.preventDefault(); });
+inp.addEventListener("drop",e=>{ e.preventDefault(); const f=e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0]; if(f) loadImage(f); });
 
 // 키는 이 브라우저 세션에만 보관(서버 미저장). 서버가 BYOK 모드면 입력란을 노출·필수화.
 keyInput.value = sessionStorage.getItem(KEYSTORE) || "";
@@ -179,6 +245,32 @@ fetch("/api/config").then(r=>r.json()).then(c=>{ requireKey=!!c.require_user_key
 
 function buildPipe(){ const p=document.getElementById("pipe"); p.innerHTML="";
   return NODES.map(n=>{ const e=el("div","node",`<div class="ico">${n.ico}</div><div class="nm">${n.nm}</div><div class="role">${n.role}</div>`); p.appendChild(e); return e; });
+}
+
+function renderDebate(turns, breakdown){
+  if(!turns || !turns.length) return null;
+  const wrap=el("div",null,`<h2 style="font-size:1rem;margin:18px 0 6px">⚖️ 법정 토론 기록 — 검사 ⇄ 변호</h2>`);
+  const det=el("details","court"); det.open=true;
+  det.appendChild(el("summary",null,"대화 펼치기 / 접기"));
+  const claimText={}; (breakdown||[]).forEach(c=>{ claimText[c.claim_id]=c.text; });
+  let lastKey=null;
+  turns.forEach(t=>{
+    if(t.role==="판사"){ det.appendChild(el("div","sysline","👩‍⚖️ "+esc(t.text))); lastKey=null; return; }
+    const key=t.loop+"/"+t.claim_id;
+    if(key!==lastKey){
+      const label=claimText[t.claim_id]!=null ? `라운드 ${t.loop+1} · “${claimText[t.claim_id]}”` : `라운드 ${t.loop+1}`;
+      det.appendChild(el("div","round-sep",esc(label)));
+      lastKey=key;
+    }
+    const side=t.role==="검사" ? "pro" : "def";
+    const who=t.role==="검사" ? "🔴 검사 (반박 측 리서처)" : "🟢 변호 (지지 측 리서처)";
+    const cits=(t.cited_snippet_ids||[]).length ? `<div class="cits">인용: ${t.cited_snippet_ids.map(esc).join(", ")}</div>` : "";
+    const row=el("div","bubblerow "+side);
+    row.appendChild(el("div","bubble "+side,`<div class="who">${who}</div>${esc(t.text)}${cits}`));
+    det.appendChild(row);
+  });
+  wrap.appendChild(det);
+  return wrap;
 }
 
 function renderResult(r){
@@ -197,11 +289,26 @@ function renderResult(r){
     if((c.supporting_sources||[]).length) srcs+=`<div class="srcs"><b>지지 출처:</b> ${c.supporting_sources.map(esc).join(", ")}</div>`;
     if((c.refuting_sources||[]).length) srcs+=`<div class="srcs"><b>반박 출처:</b> ${c.refuting_sources.map(esc).join(", ")}</div>`;
     if(!srcs) srcs=`<div class="srcs">근거 코퍼스 기반 판정</div>`;
+    let refute="";
+    if(c.self_refutation) refute=`<div class="refute"><b>⚖️ 판사의 자가 반박</b> — “${esc(c.self_refutation)}”</div>`;
     cc.innerHTML=`<div class="row" style="justify-content:space-between;margin:0">
         <span class="txt">“${esc(c.text)}”</span><span class="lbl" style="background:${cl}">${esc(c.label)} · ${cn}%</span></div>
-      <div class="meter" style="margin-top:10px"><span style="width:${cn}%;background:${cl}"></span></div>${srcs}`;
+      <div class="meter" style="margin-top:10px"><span style="width:${cn}%;background:${cl}"></span></div>${srcs}${refute}`;
     resultEl.appendChild(cc);
   });
+
+  const db=renderDebate(r.debate_transcript, r.claim_breakdown);
+  if(db) resultEl.appendChild(db);
+
+  // "불충분" 종합 판정: 시연용 코퍼스 밖 주제일 가능성 — 준비된 예시로 재시도 유도
+  if(r.overall_grade==="불충분(판단 불가)"){
+    const sg=el("div",null,`<h2 style="font-size:1rem;margin:18px 0 6px">💡 이 주제는 현재 근거 기반에 없을 수 있어요</h2>
+      <div class="srcs" style="margin-bottom:8px">본 데모는 시연용 소형 코퍼스(32건)로 동작합니다. 단정 대신 "불충분"으로 멈추는 것이
+      안전 설계입니다. 근거가 준비된 주제로 다시 시도해 보세요:</div>`);
+    const box=el("div","chips");
+    EXAMPLES.forEach(([label,text])=>{ const c=el("span","chip",label); c.onclick=()=>{ inp.value=text; clearImage(); run(); }; box.appendChild(c); });
+    sg.appendChild(box); resultEl.appendChild(sg);
+  }
 
   const tw=el("div",null,`<h2 style="font-size:1rem;margin:18px 0 6px">🚩 발견된 조작 기법</h2>`);
   if((r.technique_tags||[]).length){ const seen=new Set();
@@ -219,7 +326,8 @@ function renderResult(r){
 
 let busy=false;
 async function run(){
-  if(busy) return; const text=inp.value.trim(); if(!text){ inp.focus(); return; }
+  if(busy) return; const text=inp.value.trim();
+  if(!text && !attachedImage){ inp.focus(); return; }
   const apiKey = keyInput ? keyInput.value.trim() : "";
   if(requireKey && !apiKey){
     keyRow.classList.remove("hidden"); keyInput.focus();
@@ -238,7 +346,10 @@ async function run(){
   tick();
   const timer=setInterval(()=>{ statusEl.innerHTML=`<span class="spin"></span>실제 에이전트 실행 중… ${((Date.now()-t0)/1000).toFixed(0)}초 경과`; }, 300);
   try{
-    const res=await fetch("/api/factcheck",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(apiKey?{text,api_key:apiKey}:{text})});
+    const body={text};
+    if(apiKey) body.api_key=apiKey;
+    if(attachedImage) body.image_base64=attachedImage;
+    const res=await fetch("/api/factcheck",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
     const data=await res.json();
     anim=false; clearInterval(timer);
     nodes.forEach(n=>{ n.classList.remove("active"); n.classList.add("done"); });
