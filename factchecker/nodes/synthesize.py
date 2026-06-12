@@ -3,6 +3,7 @@
 from .. import prompts
 from ..llm import structured_invoke
 from ..models import (
+    POLAR_LABELS,
     ArgumentPair,
     ClaimBreakdown,
     Claim,
@@ -24,6 +25,21 @@ _TRUTH_SCORE = {
     VerdictLabel.FALSE: 0.0,
 }
 
+_TRUE_SIDE = {VerdictLabel.TRUE, VerdictLabel.MOSTLY_TRUE}
+_FALSE_SIDE = {VerdictLabel.MOSTLY_FALSE, VerdictLabel.FALSE}
+
+
+def _overall_label(verdicts: list[Verdict]) -> VerdictLabel:
+    """종합 등급. 참·거짓 판정이 엇갈리면 평균(0.5 부근→'불충분')으로 뭉개지
+    않고 '혼재'로 분리한다 — '판단 불가'와 '판정 상충'은 다른 결론이다."""
+    labels = {v.label for v in verdicts}
+    if labels & _TRUE_SIDE and labels & _FALSE_SIDE:
+        return VerdictLabel.MIXED
+    avg_truth = (
+        sum(_TRUTH_SCORE.get(v.label, 0.5) for v in verdicts) / len(verdicts)
+    )
+    return _score_to_label(avg_truth)
+
 
 def _score_to_label(score: float) -> VerdictLabel:
     if score >= 0.875:
@@ -43,6 +59,12 @@ def _source_label(ev: EvidenceItem) -> str:
 
 def _fallback_rebuttal(overall: VerdictLabel) -> str:
     """LLM 반론 생성 실패 시 등급에 일관된 안전 문구."""
+    if overall is VerdictLabel.MIXED:
+        return (
+            "확인 결과 이 내용에는 사실인 부분과 사실이 아닌 부분이 섞여 "
+            "있습니다. 항목별 판정을 확인하시고, 거짓으로 확인된 부분은 "
+            "공유하지 않으시는 것이 좋겠습니다."
+        )
     if overall in (VerdictLabel.FALSE, VerdictLabel.MOSTLY_FALSE):
         return (
             f"확인 결과 이 내용은 사실과 다르거나 오해의 소지가 큰 것으로 보입니다"
@@ -91,6 +113,13 @@ def _build_breakdown(
                 for s in ap.prosecution.cited_snippet_ids
                 if s in by_id
             ]
+        # 판정 근거 종류를 명시(코퍼스 인용 없는 상식 판정을 정직하게 표기)
+        if v.evidence_chain:
+            basis = f"코퍼스 증거 {len(v.evidence_chain)}건"
+        elif v.label in POLAR_LABELS:
+            basis = "일반 상식 기반(코퍼스 인용 없음)"
+        else:
+            basis = "관련 증거 부족"
         breakdowns.append(
             ClaimBreakdown(
                 claim_id=v.claim_id,
@@ -100,6 +129,7 @@ def _build_breakdown(
                 supporting_sources=sorted(set(supporting)),
                 refuting_sources=sorted(set(refuting)),
                 self_refutation=v.self_refutation,
+                basis=basis,
             )
         )
     return breakdowns
@@ -134,10 +164,8 @@ def synthesize(state: FactCheckState) -> dict:
     breakdowns = _build_breakdown(claims, verdicts, arguments, pool)
 
     if verdicts:
-        avg_truth = (
-            sum(_TRUTH_SCORE[v.label] for v in verdicts) / len(verdicts)
-        )
-        overall = _score_to_label(avg_truth)
+        overall = _overall_label(verdicts)
+        # 주장별 판정 확신의 평균(종합 등급 자체의 확률이 아님 — UI 표기 참조)
         overall_conf = sum(v.confidence for v in verdicts) / len(verdicts)
     else:
         overall = VerdictLabel.INSUFFICIENT

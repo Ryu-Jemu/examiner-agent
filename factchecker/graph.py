@@ -8,6 +8,7 @@ from .nodes import (
     judge,
     retrieve_evidence,
     route_after_judge,
+    route_after_retrieve,
     synthesize,
     tag_techniques,
 )
@@ -32,7 +33,17 @@ def build_graph() -> StateGraph:
     builder.add_edge("extract_claims", "retrieve_evidence")
     builder.add_edge("extract_claims", "tag_techniques")
 
-    builder.add_edge("retrieve_evidence", "adversarial_debate")
+    # 조건 분기: 재검색에서 신규 증거가 없으면 토론·판사 재실행은 입력이
+    # 동일해 무의미 → 직전 판정으로 바로 합성(LLM 호출 절약). 첫 라운드는
+    # 항상 토론으로 진행한다.
+    builder.add_conditional_edges(
+        "retrieve_evidence",
+        route_after_retrieve,
+        {
+            "adversarial_debate": "adversarial_debate",
+            "synthesize": "synthesize",
+        },
+    )
     builder.add_edge("adversarial_debate", "judge")
 
     # 조건 분기: 증거 부족 시 루프, 통과 시 합성

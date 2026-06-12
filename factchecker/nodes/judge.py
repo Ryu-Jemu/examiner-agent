@@ -6,6 +6,7 @@ from .. import prompts
 from ..config import get_settings
 from ..llm import structured_invoke
 from ..models import (
+    POLAR_LABELS,
     Claim,
     DebateTurn,
     EvidenceItem,
@@ -100,7 +101,24 @@ def judge(state: FactCheckState) -> dict:
             dropped = [s for s in v.evidence_chain if s not in valid_ids]
             if dropped:
                 logger.warning("환각 evidence_chain 제거: %s (유효 id 아님)", dropped)
-            v.evidence_chain = [s for s in v.evidence_chain if s in valid_ids]
+            kept = [s for s in v.evidence_chain if s in valid_ids]
+            all_hallucinated = bool(dropped) and not kept
+            v.evidence_chain = kept
+            if v.label == VerdictLabel.MIXED:
+                # "혼재"는 종합 등급 전용 — 주장 단위로 나오면 불충분으로 강등
+                logger.warning("주장 단위 혼재 라벨 → 불충분 강등 (claim %d)", v.claim_id)
+                v.label = VerdictLabel.INSUFFICIENT
+            if all_hallucinated and v.label in POLAR_LABELS:
+                # 인용 전부가 지어낸 id 인 단정 판정 = 근거 없는 단정 → 불충분 강등
+                logger.warning(
+                    "전량 환각 인용의 단정 판정 → 불충분 강등 (claim %d)", v.claim_id
+                )
+                v.label = VerdictLabel.INSUFFICIENT
+                v.confidence = min(v.confidence, 0.5)
+            elif v.label in POLAR_LABELS and not v.evidence_chain:
+                # 상식 예외 경로(코퍼스 인용 없음): 코퍼스로 검증 불가한 파라메트릭
+                # 판정이므로 신뢰도에 상한을 둔다(고확신 환각 오판의 피해 축소).
+                v.confidence = min(v.confidence, 0.85)
     else:
         verdicts = []
 

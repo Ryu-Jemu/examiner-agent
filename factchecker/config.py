@@ -105,7 +105,9 @@ def _build_settings(require_api_key: bool = True) -> Settings:
         ).strip(),
         max_loops=_int("MAX_LOOPS", 2),
         retrieve_k=_int("RETRIEVE_K", 3),
-        retrieve_min_relevance=_float("RETRIEVE_MIN_RELEVANCE", 0.32),
+        # 코퍼스 실측 보정값(gemini-embedding-001·cosine): 주제 일치 스니펫
+        # 0.717 이상 / 무관 0.676 이하로 분리. 임베딩 모델 교체 시 재보정.
+        retrieve_min_relevance=_float("RETRIEVE_MIN_RELEVANCE", 0.70),
         confidence_delta_threshold=_float("CONFIDENCE_DELTA_THRESHOLD", 0.05),
         max_claims=_int("MAX_CLAIMS", 2),
         llm_throttle_seconds=_float("LLM_THROTTLE_SECONDS", 0.0),

@@ -51,3 +51,19 @@ def retrieve_evidence(state: FactCheckState) -> dict:
 
     # evidence_pool 은 add 리듀서 → 신규만 반환. prev_pool_size 는 단일 쓰기.
     return {"evidence_pool": new_items, "prev_pool_size": prev_size}
+
+
+def route_after_retrieve(state: FactCheckState) -> str:
+    """재검색(2라운드 이후)에서 신규 증거가 0건이면 토론·판사를 건너뛴다.
+
+    스탠스 쿼리는 주장 텍스트만의 함수라 재검색 결과가 결정론적으로 동일하고,
+    전부 중복 제거되어 풀이 정체된다. 이때 토론·판사를 다시 돌려도 입력이
+    같아 정보가 늘지 않으므로(직전 라운드 판정 유지) 바로 합성으로 보낸다
+    — 주장당 토론 3회 + 판사 1회의 LLM 호출 절약.
+    """
+    loop = state.get("loop_count", 0)
+    pool = state.get("evidence_pool", []) or []
+    prev = state.get("prev_pool_size", -1)
+    if loop > 0 and len(pool) == prev:
+        return "synthesize"
+    return "adversarial_debate"

@@ -25,6 +25,19 @@ class VerdictLabel(str, Enum):
     INSUFFICIENT = "불충분(판단 불가)"
     MOSTLY_FALSE = "대체로 거짓"
     FALSE = "거짓·오도"
+    # 종합 등급 전용: 주장별 판정이 참·거짓으로 엇갈릴 때. 평균 점수로 뭉개면
+    # "불충분"으로 둔갑하므로 별도 등급으로 분리한다. 주장 단위 판정에는 금지
+    # (judge 노드가 코드 레벨에서 불충분으로 강등).
+    MIXED = "혼재(일부 사실·일부 거짓)"
+
+
+# 참/거짓 방향이 확정된 판정 라벨(상식 예외·집계 가드에서 사용)
+POLAR_LABELS = {
+    VerdictLabel.TRUE,
+    VerdictLabel.MOSTLY_TRUE,
+    VerdictLabel.MOSTLY_FALSE,
+    VerdictLabel.FALSE,
+}
 
 
 class TechniqueTagName(str, Enum):
@@ -73,6 +86,10 @@ class EvidenceItem(BaseModel):
     credibility: float = Field(ge=0.0, le=1.0, default=0.2)
     url: str | None = None
     stance: str | None = None
+    # 회수 시 코사인 관련성 점수(임계값 통과값). 판사·토론 프롬프트에 노출해
+    # 턱걸이 매칭과 강한 매칭을 구분하게 한다. 점수 없는 회수 경로는 None.
+    relevance: float | None = None
+    date: str | None = None  # 증거 작성·기준 시점(코퍼스 메타데이터)
 
 
 class SideArgument(BaseModel):
@@ -160,6 +177,9 @@ class ClaimBreakdown(BaseModel):
     supporting_sources: list[str] = Field(default_factory=list)
     refuting_sources: list[str] = Field(default_factory=list)
     self_refutation: str = ""  # 판사의 자가 반박(투명성 노출용)
+    # 판정 근거 종류(투명성): "코퍼스 증거 N건" | "일반 상식(코퍼스 인용 없음)" 등.
+    # 코퍼스 인용 없는 판정을 UI 에서 정직하게 표기하기 위함.
+    basis: str = ""
 
 
 class FinalReport(BaseModel):

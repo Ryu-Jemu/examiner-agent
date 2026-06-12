@@ -26,7 +26,7 @@ def _source_type_from_str(value: str) -> SourceType:
     return SourceType.UNKNOWN
 
 
-def _doc_to_evidence(doc, claim_id: int) -> EvidenceItem:
+def _doc_to_evidence(doc, claim_id: int, score: float | None) -> EvidenceItem:
     meta = doc.metadata or {}
     st = _source_type_from_str(meta.get("source_type", "출처불명"))
     return EvidenceItem(
@@ -37,6 +37,8 @@ def _doc_to_evidence(doc, claim_id: int) -> EvidenceItem:
         source_type=st,
         credibility=SOURCE_CREDIBILITY[st],
         url=(meta.get("url") or None),
+        relevance=score,
+        date=(meta.get("date") or None),
     )
 
 
@@ -92,7 +94,7 @@ def retrieve_for_claim(
         for doc, score in _search(store, query, k, min_rel):
             if score is not None and score < min_rel:
                 continue  # 관련성 낮음 → 무관 스니펫 제외
-            item = _doc_to_evidence(doc, claim_id)
+            item = _doc_to_evidence(doc, claim_id, score)
             key = (claim_id, item.snippet_id or item.snippet[:40])
             if key in existing_ids:
                 continue  # 이전 라운드에 이미 풀에 귀속됨

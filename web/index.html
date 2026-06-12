@@ -10,7 +10,7 @@
     --line: #2e3556; --txt: #e7ecf6; --muted: #9aa3c0; --accent: #6d8bff;
     --accent2: #9a6dff;
     --g-true: #2bb673; --g-mtrue: #7ac043; --g-insuf: #4b5474;
-    --g-mfalse: #f59e0b; --g-false: #ef4444;
+    --g-mfalse: #f59e0b; --g-false: #ef4444; --g-mixed: #8b5cf6;
     --radius: 16px; --shadow: 0 10px 30px rgba(0,0,0,.35);
     --font: -apple-system, BlinkMacSystemFont, "Segoe UI", "Apple SD Gothic Neo",
             "Malgun Gothic", "Noto Sans KR", Roboto, sans-serif;
@@ -188,6 +188,7 @@ const EXAMPLES = [
 const GRADE_COLOR = {
   "사실":"var(--g-true)", "대체로 사실":"var(--g-mtrue)", "불충분(판단 불가)":"var(--g-insuf)",
   "대체로 거짓":"var(--g-mfalse)", "거짓·오도":"var(--g-false)",
+  "혼재(일부 사실·일부 거짓)":"var(--g-mixed)",
 };
 function el(t,c,h){const e=document.createElement(t); if(c)e.className=c; if(h!=null)e.innerHTML=h; return e;}
 function esc(s){return (s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]));}
@@ -279,16 +280,20 @@ function renderResult(r){
   const conf=Math.round((r.overall_confidence||0)*100);
   const head=el("div","gradewrap");
   const gb=el("div","gradebadge",`종합: ${esc(r.overall_grade)}`); gb.style.background=color; head.appendChild(gb);
-  const g=el("div","gauge"); g.innerHTML=`<div style="font-size:.85rem;color:var(--muted);margin-bottom:6px">종합 신뢰도 ${conf}%</div>
+  const g=el("div","gauge"); g.innerHTML=`<div style="font-size:.85rem;color:var(--muted);margin-bottom:6px">판정 신뢰도 ${conf}% <span style="opacity:.7">(주장별 판정 확신의 평균)</span></div>
     <div class="meter"><span style="width:${conf}%;background:${color}"></span></div>`; head.appendChild(g);
   resultEl.appendChild(head);
+  if(r.overall_grade==="혼재(일부 사실·일부 거짓)"){
+    resultEl.appendChild(el("div","srcs","⚖️ 주장별 판정이 사실과 거짓으로 엇갈렸습니다 — 아래 항목별 결과를 확인하세요."));
+  }
 
   (r.claim_breakdown||[]).forEach(c=>{
     const cc=el("div","claim"); const cl=GRADE_COLOR[c.label]||"var(--g-insuf)"; const cn=Math.round((c.confidence||0)*100);
     let srcs="";
     if((c.supporting_sources||[]).length) srcs+=`<div class="srcs"><b>지지 출처:</b> ${c.supporting_sources.map(esc).join(", ")}</div>`;
     if((c.refuting_sources||[]).length) srcs+=`<div class="srcs"><b>반박 출처:</b> ${c.refuting_sources.map(esc).join(", ")}</div>`;
-    if(!srcs) srcs=`<div class="srcs">근거 코퍼스 기반 판정</div>`;
+    if(!srcs) srcs=`<div class="srcs">${esc(c.basis||"코퍼스 인용 근거 없음")}</div>`;
+    else if(c.basis) srcs+=`<div class="srcs"><b>판정 근거:</b> ${esc(c.basis)}</div>`;
     let refute="";
     if(c.self_refutation) refute=`<div class="refute"><b>⚖️ 판사의 자가 반박</b> — “${esc(c.self_refutation)}”</div>`;
     cc.innerHTML=`<div class="row" style="justify-content:space-between;margin:0">

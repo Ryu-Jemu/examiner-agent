@@ -44,3 +44,33 @@ def test_existing_ids_dedup_across_rounds():
     # 같은 라운드 키 집합을 공유하면 재검색에서 신규 없음 → 종료조건(3) 입력
     second = retrieve_for_claim("주장", 0, k=3, store=store, existing_ids=seen)
     assert second == []
+
+
+class _ScoredStore:
+    """주제 일치(고점수)·무관(저점수) 스니펫을 함께 돌려주는 스텁.
+
+    실측 분포(gemini-embedding-001·cosine): 주제 일치 0.717 이상,
+    무관 0.676 이하 — 기본 임계값 0.70 이 그 사이를 가른다.
+    """
+
+    def similarity_search_with_relevance_scores(self, query, k):
+        on_topic = _Doc("ev_on_topic")
+        on_topic.metadata["date"] = "2021"
+        return [(on_topic, 0.74), (_Doc("ev_off_topic"), 0.62)]
+
+
+def test_min_relevance_filters_off_topic_snippets():
+    items = retrieve_for_claim(
+        "주장", 0, k=3, store=_ScoredStore(), existing_ids=set()
+    )
+    # 무관 스니펫(0.62)은 기본 임계값 0.70 에 걸러지고 주제 일치만 남는다
+    assert {i.snippet_id for i in items} == {"ev_on_topic"}
+
+
+def test_relevance_and_date_propagated_to_evidence():
+    items = retrieve_for_claim(
+        "주장", 0, k=3, store=_ScoredStore(), existing_ids=set()
+    )
+    item = items[0]
+    assert item.relevance == 0.74
+    assert item.date == "2021"
