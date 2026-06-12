@@ -25,9 +25,7 @@ class VerdictLabel(str, Enum):
     INSUFFICIENT = "불충분(판단 불가)"
     MOSTLY_FALSE = "대체로 거짓"
     FALSE = "거짓·오도"
-    # 종합 등급 전용: 주장별 판정이 참·거짓으로 엇갈릴 때. 평균 점수로 뭉개면
-    # "불충분"으로 둔갑하므로 별도 등급으로 분리한다. 주장 단위 판정에는 금지
-    # (judge 노드가 코드 레벨에서 불충분으로 강등).
+    # 종합 등급 전용. 주장 단위 판정에는 금지(judge 노드가 불충분으로 강등).
     MIXED = "혼재(일부 사실·일부 거짓)"
 
 
@@ -47,13 +45,12 @@ class TechniqueTagName(str, Enum):
     FALSE_DICHOTOMY = "거짓 이분법"
 
 
-# 증거 스탠스: 어느 측 리서처(검사/변호)의 검색 쿼리로 회수됐는가.
-# 양측 쿼리에 모두 걸리면 "both", 과거 데이터·중립 회수는 None(양측 공용 취급).
+# 증거 스탠스. 양측 쿼리에 모두 걸리면 "both", 중립 회수는 None.
 STANCE_PROSECUTION = "prosecution"
 STANCE_DEFENSE = "defense"
 STANCE_BOTH = "both"
 
-# 출처 유형 → 신뢰도(결정론적 매핑; retrieve_evidence 에서 사용)
+# 출처 유형별 신뢰도(결정론적 매핑, retrieve_evidence 에서 사용)
 SOURCE_CREDIBILITY: dict[SourceType, float] = {
     SourceType.GOV: 0.90,
     SourceType.ACADEMIC: 0.85,
@@ -86,8 +83,7 @@ class EvidenceItem(BaseModel):
     credibility: float = Field(ge=0.0, le=1.0, default=0.2)
     url: str | None = None
     stance: str | None = None
-    # 회수 시 코사인 관련성 점수(임계값 통과값). 판사·토론 프롬프트에 노출해
-    # 턱걸이 매칭과 강한 매칭을 구분하게 한다. 점수 없는 회수 경로는 None.
+    # 회수 시 코사인 관련성 점수. 점수 없는 회수 경로는 None.
     relevance: float | None = None
     date: str | None = None  # 증거 작성·기준 시점(코퍼스 메타데이터)
 
@@ -113,9 +109,9 @@ class ArgumentPair(BaseModel):
 class DebateTurn(BaseModel):
     """법정 대화 한 턴(프런트 대화창·판사 입력에 사용)."""
 
-    claim_id: int  # 시스템(판사) 턴은 -1
+    claim_id: int  # 시스템(판사) 턴은 -1(전역) 또는 해당 주장 id(주장 귀속 안내)
     loop: int
-    turn: int      # 라운드 내 발언 순서(0부터)
+    turn: int      # 라운드 내 발언 순서(0부터). 시스템 턴은 99
     role: str      # "검사" | "변호" | "판사"
     text: str
     cited_snippet_ids: list[str] = Field(default_factory=list)
@@ -129,7 +125,7 @@ class Verdict(BaseModel):
         default_factory=list, description="결론 근거가 된 snippet_id 목록(순서대로)"
     )
     rationale: str = Field(default="", description="판정 근거 설명")
-    # 자가 반박을 판정과 같은 호출에서 함께 산출 → LLM 호출 1회 절약
+    # 자가 반박을 판정과 같은 호출에서 함께 산출(LLM 호출 1회 절약).
     self_refutation: str = Field(
         default="", description="이 판정을 뒤집을 수 있는 가장 강한 반론(레드팀)"
     )
@@ -177,8 +173,7 @@ class ClaimBreakdown(BaseModel):
     supporting_sources: list[str] = Field(default_factory=list)
     refuting_sources: list[str] = Field(default_factory=list)
     self_refutation: str = ""  # 판사의 자가 반박(투명성 노출용)
-    # 판정 근거 종류(투명성): "코퍼스 증거 N건" | "일반 상식(코퍼스 인용 없음)" 등.
-    # 코퍼스 인용 없는 판정을 UI 에서 정직하게 표기하기 위함.
+    # 판정 근거 종류: "코퍼스 증거 N건" | "일반 상식(코퍼스 인용 없음)" 등.
     basis: str = ""
 
 

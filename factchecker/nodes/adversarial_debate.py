@@ -1,10 +1,4 @@
-"""검사 ⇄ 변호 3턴 순차 토론 노드.
-
-턴 구성(주장당): ① 검사 발언 → ② 변호가 검사 논거를 읽고 반박 → ③ 검사
-재반박. 각 측은 자기 전속 리서처가 회수한 증거 풀(스탠스 태깅)만 받고,
-인용 id 는 자기 풀의 부분집합으로 사후 필터링한다(환각 가드).
-대화 전문은 debate_transcript 로 누적되어 프런트 대화창에 표시된다.
-"""
+"""검사·변호 3턴 순차 토론 노드. 인용 id 사후 필터링으로 환각 가드. 코퍼스 증거 0건 주장은 일반 상식 토론으로 전환."""
 
 import logging
 
@@ -27,6 +21,13 @@ from .formatting import (
 )
 
 logger = logging.getLogger("factchecker.nodes.debate")
+
+# 한쪽 리서처 풀만 빈 경우의 안내문(상식 토론 트리거 문자열과 달라야 함).
+_EMPTY_SIDE_BLOCK = (
+    "(귀측 리서처가 회수한 증거가 없습니다. 상대측 증거만 존재합니다. "
+    "인용 없이 단정하지 말고, 증거가 부족하다는 사실을 summary 에 솔직히 "
+    "적으세요.)"
+)
 
 
 def _filter_citations(side: SideArgument, valid_ids: set[str]) -> SideArgument:
@@ -55,37 +56,45 @@ def adversarial_debate(state: FactCheckState) -> dict:
         if not claim.checkable:
             continue
         ev_all = evidence_for_claim(pool, claim.claim_id)
-        # 비용 절감: 증거가 없으면 양측이 인용할 게 없으므로 LLM 호출을 건너뛴다
-        # (판사가 증거 0 → "불충분(판단 불가)"으로 처리). 빈 논거쌍만 남긴다.
+        # 코퍼스 증거 0건(범위 밖 주장): 일반 상식 토론으로 전환. 환각 가드는 프롬프트 날조 금지 규칙, 인용 id 사후 필터, 판사 단계 신뢰도 상한 3중.
         if not ev_all:
-            empty = SideArgument(
-                summary="(인용할 증거 없음)", cited_snippet_ids=[]
-            )
-            pairs.append(
-                ArgumentPair(
-                    claim_id=claim.claim_id, loop=loop,
-                    prosecution=empty, defense=empty,
+            if state.get("retrieval_failed", False):
+                # 인프라 장애를 '범위 밖 주장'으로 위장하지 않도록 안내문 분기.
+                notice = (
+                    f"「{claim.text}」 증거 검색이 일시적으로 실패하여 "
+                    "코퍼스 증거 없이 진행합니다(주제가 범위 밖이 아닐 수 "
+                    "있음). 양측이 일반 상식 수준에서 토론합니다(인용 없음)."
+                )
+            else:
+                notice = (
+                    f"「{claim.text}」 이 주장과 관련된 코퍼스 증거가 "
+                    "없어, 양측이 일반 상식 수준에서 토론합니다"
+                    "(증거 인용 없음)."
+                )
+            transcript.append(
+                DebateTurn(
+                    claim_id=claim.claim_id, loop=loop, turn=99, role="판사",
+                    text=notice,
                 )
             )
-            for turn, role in enumerate(("검사", "변호")):
-                transcript.append(
-                    DebateTurn(
-                        claim_id=claim.claim_id, loop=loop, turn=turn,
-                        role=role, text="(인용할 증거가 없습니다)",
-                    )
-                )
-            continue
 
         # 양측 전속 리서처 풀(자기 스탠스 + both + 미태깅)
         ev_pro = evidence_for_side(pool, claim.claim_id, STANCE_PROSECUTION)
         ev_def = evidence_for_side(pool, claim.claim_id, STANCE_DEFENSE)
         pro_ids = {e.snippet_id for e in ev_pro}
         def_ids = {e.snippet_id for e in ev_def}
-        pro_block = format_evidence_block(ev_pro)
-        def_block = format_evidence_block(ev_def)
+        # 한쪽 풀만 비면 별도 안내문으로 '증거 부족 솔직 진술' 경로.
+        pro_block = (
+            format_evidence_block(ev_pro)
+            if (ev_pro or not ev_all) else _EMPTY_SIDE_BLOCK
+        )
+        def_block = (
+            format_evidence_block(ev_def)
+            if (ev_def or not ev_all) else _EMPTY_SIDE_BLOCK
+        )
         empty = SideArgument(summary="(논거 생성 실패)", cited_snippet_ids=[])
 
-        # ① 검사 발언
+        # 검사 발언
         prosecution = structured_invoke(
             prompts.render(
                 "prosecution",
@@ -97,7 +106,7 @@ def adversarial_debate(state: FactCheckState) -> dict:
         )
         prosecution = _filter_citations(prosecution, pro_ids)
 
-        # ② 변호 반박(검사 논거를 입력으로 받음)
+        # 변호 반박(검사 논거를 입력으로 받음)
         defense = structured_invoke(
             prompts.render(
                 "defense",
@@ -110,7 +119,7 @@ def adversarial_debate(state: FactCheckState) -> dict:
         )
         defense = _filter_citations(defense, def_ids)
 
-        # ③ 검사 재반박(변호 반박을 입력으로 받음)
+        # 검사 재반박(변호 반박을 입력으로 받음)
         rebuttal = structured_invoke(
             prompts.render(
                 "prosecution_rebuttal",
@@ -147,5 +156,5 @@ def adversarial_debate(state: FactCheckState) -> dict:
                 )
             )
 
-    # arguments / debate_transcript 모두 add 리듀서 → 라운드 누적
+    # arguments / debate_transcript 모두 add 리듀서로 라운드 누적
     return {"arguments": pairs, "debate_transcript": transcript}

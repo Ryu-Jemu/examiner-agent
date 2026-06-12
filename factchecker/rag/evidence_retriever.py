@@ -1,8 +1,4 @@
-"""로컬 Chroma evidence 컬렉션에서 주장과 유사한 증거 스니펫을 회수한다.
-
-양측 전속 리서처: 검사(반박 관점)·변호(지지 관점) 쿼리를 각각 실행해
-스니펫에 스탠스를 태깅한다. 양측 쿼리에 모두 걸린 스니펫은 "both".
-"""
+"""로컬 Chroma evidence 컬렉션에서 검사·변호 관점 쿼리로 증거 스니펫을 회수한다."""
 
 import logging
 
@@ -49,8 +45,7 @@ def _stance_query(claim_text: str, stance: str) -> str:
 
 
 def _search(store, query: str, k: int, min_rel: float) -> list[tuple]:
-    # 관련성(코사인) 임계값 이상만 채택해 코퍼스 밖 주장에 엉뚱한 근거가 섞이지 않게 한다.
-    # 임계값<=0 이면 점수 없이 회수한다(결정론적 테스트용).
+    # 관련성(코사인) 임계값 이상만 채택. 임계값<=0이면 점수 없이 회수(결정론적 테스트용)
     try:
         if min_rel > 0:
             return list(
@@ -70,15 +65,14 @@ def retrieve_for_claim(
     store=None,
     existing_ids: set | None = None,
 ) -> list[EvidenceItem]:
-    """주장 하나의 증거 스니펫을 양측(검사/변호) 관점 쿼리로 회수한다.
+    """주장 하나의 증거 스니펫을 검사/변호 관점 쿼리로 회수한다.
 
-    existing_ids 는 (claim_id, snippet_id) 복합 키 집합으로 동일 주장 내 중복만
-    제외한다(같은 스니펫이 다른 주장엔 각각 귀속). 스탠스는 회수한 쿼리 측으로
-    태깅하고, 양측 모두 회수하면 "both" 로 승격한다.
+    existing_ids는 (claim_id, snippet_id) 복합 키로 동일 주장 내 중복만 제외한다.
+    스탠스는 회수한 쿼리 측으로 태깅하고, 양측 모두 회수하면 "both"로 승격한다.
     """
     settings = get_settings()
     k = settings.retrieve_k if k is None else k
-    if existing_ids is None:  # 빈 set 도 그대로 사용·변이(호출 간 공유)되도록
+    if existing_ids is None:  # 빈 set도 그대로 사용·변이되도록
         existing_ids = set()
 
     if store is None:
@@ -93,7 +87,7 @@ def retrieve_for_claim(
         query = _stance_query(claim_text, stance)
         for doc, score in _search(store, query, k, min_rel):
             if score is not None and score < min_rel:
-                continue  # 관련성 낮음 → 무관 스니펫 제외
+                continue  # 관련성 낮은 무관 스니펫 제외
             item = _doc_to_evidence(doc, claim_id, score)
             key = (claim_id, item.snippet_id or item.snippet[:40])
             if key in existing_ids:

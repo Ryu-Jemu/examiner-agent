@@ -1,4 +1,4 @@
-# Rumor Verification Agent — 라이브 웹 앱 컨테이너
+# Rumor Verification Agent: 라이브 웹 앱 컨테이너
 # 키는 이미지에 포함하지 않는다. 런타임에 환경변수(--env-file/-e 또는 플랫폼 시크릿)로 주입.
 # 임베딩(RAG)은 Gemini 를 사용하므로 런타임에 GOOGLE_API_KEY 가 필요하다.
 FROM python:3.12-slim

@@ -24,8 +24,7 @@ def build_graph() -> StateGraph:
     builder.add_node("adversarial_debate", adversarial_debate)
     builder.add_node("judge", judge)
     builder.add_node("tag_techniques", tag_techniques)
-    # defer=True: synthesize 는 병렬 분기(tag_techniques)와 루프 분기(judge)가 모두
-    # 정착(settle)한 뒤 정확히 한 번 실행된다. fan-in + 루프 조기 발화 방지.
+    # defer=True: 병렬 분기와 루프 분기가 모두 정착한 뒤 synthesize 를 한 번만 실행(fan-in 조기 발화 방지).
     builder.add_node("synthesize", synthesize, defer=True)
 
     builder.add_edge(START, "extract_claims")
@@ -33,9 +32,7 @@ def build_graph() -> StateGraph:
     builder.add_edge("extract_claims", "retrieve_evidence")
     builder.add_edge("extract_claims", "tag_techniques")
 
-    # 조건 분기: 재검색에서 신규 증거가 없으면 토론·판사 재실행은 입력이
-    # 동일해 무의미 → 직전 판정으로 바로 합성(LLM 호출 절약). 첫 라운드는
-    # 항상 토론으로 진행한다.
+    # 조건 분기: 재검색에 신규 증거가 없으면 토론·판사 재실행은 무의미하므로 직전 판정으로 바로 합성. 첫 라운드는 항상 토론.
     builder.add_conditional_edges(
         "retrieve_evidence",
         route_after_retrieve,

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""라이브 웹 앱. `python server.py` → http://127.0.0.1:8000 (배포는 DEPLOY.md)."""
+"""라이브 웹 앱. python server.py 로 http://127.0.0.1:8000 에서 실행(배포는 DEPLOY.md)."""
 
 import logging
 import os
@@ -27,8 +27,7 @@ def _int_env(name: str, default: int) -> int:
 
 
 _MAX_INPUT_CHARS = _int_env("MAX_INPUT_CHARS", 2000)
-# 첨부 이미지(data URL) 길이 상한 — 프런트가 1024px/JPEG 로 다운스케일해
-# 보내므로 평소 수백 KB 수준. 비정상 페이로드만 차단한다.
+# 첨부 이미지(data URL) 길이 상한. 비정상 페이로드 차단용.
 _MAX_IMAGE_CHARS = _int_env("MAX_IMAGE_CHARS", 1_400_000)
 
 app = FastAPI(title="Rumor Verification Agent", version="0.1.0")
@@ -47,7 +46,7 @@ if _cors:
 
 
 class CheckRequest(BaseModel):
-    # 길이/공백 검증은 핸들러에서 처리해 일관된 {"error": ...} JSON 으로 응답한다.
+    # 길이/공백 검증은 핸들러에서 처리.
     text: str = ""
     api_key: str | None = None  # BYOK: 사용자가 입력한 외부 LLM API 키
     image_base64: str | None = None  # 첨부 이미지(data:image/...;base64,...)
@@ -124,7 +123,7 @@ def factcheck(req: CheckRequest):
             text, api_key=user_key, image_data_url=image
         )
         payload = report_from_state(final_state).model_dump(mode="json")
-        # 법정 대화 기록(검사·변호 3턴 + 판사 시스템 턴) — 프런트 대화창용
+        # 법정 대화 기록(검사·변호 3턴 + 판사 시스템 턴). 프런트 대화창용.
         payload["debate_transcript"] = [
             t.model_dump(mode="json")
             for t in (final_state.get("debate_transcript") or [])
@@ -132,8 +131,7 @@ def factcheck(req: CheckRequest):
     except ConfigError as exc:
         return JSONResponse({"error": str(exc)}, status_code=400)
     except Exception:
-        # 외부 API 오류 메시지(요청 ID·부분 키 등)가 클라이언트로 새지 않도록
-        # 상세는 서버 로그로만 남기고 일반 메시지를 반환한다.
+        # 외부 API 오류 상세는 서버 로그로만 남기고 일반 메시지를 반환.
         logger.exception("factcheck failed")
         return JSONResponse(
             {"error": "검증 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요."},
@@ -153,12 +151,12 @@ def main() -> None:
     host = os.getenv("HOST", "127.0.0.1")
     port = _int_env("PORT", 8000)
 
-    # 시작 전 설정을 점검해 키 누락 시 안내(서버는 그래도 띄운다).
+    # 시작 전 설정 점검(키 누락 시 안내, 서버는 그래도 띄운다).
     try:
         from factchecker.config import get_settings
 
         get_settings()
-        print("[설정 확인] OK — 라이브 검증 준비됨")
+        print("[설정 확인] OK. 라이브 검증 준비됨")
     except Exception as exc:
         print(str(exc))
         print("[안내] .env(또는 환경변수) 설정 후 새로고침하면 동작합니다.\n")

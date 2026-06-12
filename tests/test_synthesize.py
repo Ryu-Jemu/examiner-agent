@@ -1,4 +1,4 @@
-"""synthesize — 종합 등급 집계: 혼재 분리, 평균 경로, 판정 근거 표기."""
+"""synthesize 종합 등급 집계: 혼재 분리, 평균 경로, 판정 근거 표기."""
 
 import importlib
 
@@ -54,6 +54,15 @@ def test_conflicting_verdicts_yield_mixed_not_insufficient(monkeypatch):
     ])
     assert report.overall_grade == VerdictLabel.MIXED
     assert abs(report.overall_confidence - 0.97) < 1e-9
+
+
+def test_low_confidence_polar_does_not_trigger_mixed(monkeypatch):
+    # 저신뢰(0.5 미만) 단정 1건이 종합을 혼재로 뒤집지 못하고 평균 경로를 탄다
+    report = _run(monkeypatch, [
+        _verdict(0, VerdictLabel.TRUE, 0.99),
+        _verdict(1, VerdictLabel.MOSTLY_FALSE, 0.10),
+    ])
+    assert report.overall_grade == VerdictLabel.MOSTLY_TRUE
 
 
 def test_all_insufficient_stays_insufficient(monkeypatch):

@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "factchecker"
 version = "0.1.0"
-description = "Rumor Verification Agent — LangGraph multi-agent adversarial fact-checker"
+description = "Rumor Verification Agent: LangGraph multi-agent adversarial fact-checker"
 readme = "README.md"
 requires-python = ">=3.11,<3.14"
 license = { text = "MIT" }

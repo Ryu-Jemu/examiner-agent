@@ -13,15 +13,14 @@ from .config import get_settings
 
 logger = logging.getLogger("factchecker.llm")
 
-# 요청 범위 사용자 API 키(BYOK). 서버가 요청마다 set/reset 한다. graph.invoke 이전에
-# 설정하면 LangGraph 가 병렬 노드 워커로 컨텍스트를 복사할 때 키가 함께 전파된다.
+# 요청 범위 사용자 API 키(BYOK). graph.invoke 이전에 설정해야 병렬 노드 워커로 전파된다.
 _user_api_key: contextvars.ContextVar[str | None] = contextvars.ContextVar(
     "factchecker_user_api_key", default=None
 )
 
 
 def set_request_api_key(key: str | None):
-    """요청 범위 키 설정. 반환된 토큰을 finally 에서 reset_request_api_key 로 되돌린다."""
+    """요청 범위 키 설정. 반환 토큰은 reset_request_api_key 로 되돌린다."""
     return _user_api_key.set((key or "").strip() or None)
 
 
@@ -45,7 +44,7 @@ _RATE_LIMIT_MARKERS = (
     "too many requests",
     "overloaded",   # 일부 공급자의 과부하(529)
     "529",
-    # 일시적 네트워크/서버 오류 — 즉시 degrade 대신 백오프 재시도
+    # 일시적 네트워크/서버 오류는 즉시 degrade 대신 백오프 재시도
     "connection error",
     "connection reset",
     "timed out",
@@ -120,11 +119,10 @@ def structured_invoke(
     *,
     default: T,
 ) -> T:
-    """schema 로 구조화 응답을 받고, 실패 시 default 반환.
+    """schema 로 구조화 응답을 받고, 실패 시 default 반환(레이트리밋은 백오프 재시도).
 
-    레이트리밋은 백오프 재시도. prompt 는 str 또는 LangChain 메시지
-    리스트를 받는다(멀티모달 입력은 HumanMessage(content=[텍스트 블록,
-    이미지 블록]) 형태로 전달).
+    prompt 는 str 또는 LangChain 메시지 리스트(멀티모달은
+    HumanMessage(content=[텍스트 블록, 이미지 블록])).
     """
     max_attempts = max(1, get_settings().llm_max_attempts)
     for attempt in range(max_attempts):
@@ -134,26 +132,26 @@ def structured_invoke(
             structured = llm.with_structured_output(schema)
             result = structured.invoke(prompt)
             if result is None:
-                logger.warning("구조화 출력이 None → 기본값 (schema=%s)", schema.__name__)
+                logger.warning("구조화 출력이 None, 기본값 사용 (schema=%s)", schema.__name__)
                 return default
             if not isinstance(result, schema):
                 try:
                     return schema.model_validate(result)
                 except Exception:
-                    logger.warning("구조화 출력 타입 불일치 → 기본값 (%s)", schema.__name__)
+                    logger.warning("구조화 출력 타입 불일치, 기본값 사용 (%s)", schema.__name__)
                     return default
             return result
         except Exception as exc:
             if _is_rate_limit(exc) and attempt < max_attempts - 1:
                 wait = min(60, 5 * (2 ** attempt))  # 5,10,20,40,60s
                 logger.warning(
-                    "레이트리밋 감지 → %ds 후 재시도 (%d/%d)",
+                    "레이트리밋 감지, %ds 후 재시도 (%d/%d)",
                     wait, attempt + 1, max_attempts,
                 )
                 time.sleep(wait)
                 continue
             logger.warning(
-                "구조화 호출 실패(%s) → 기본값: %s",
+                "구조화 호출 실패(%s), 기본값 사용: %s",
                 schema.__name__, _redact(str(exc)),
             )
             return default

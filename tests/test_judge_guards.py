@@ -1,4 +1,4 @@
-"""judge — 판정 코드 가드: 전량 환각 인용 강등, 상식 판정 신뢰도 상한, 혼재 차단."""
+"""judge 판정 코드 가드: 전량 환각 인용 강등, 상식 판정 신뢰도 상한, 혼재 차단."""
 
 import importlib
 
@@ -41,7 +41,7 @@ def _patch(monkeypatch, verdicts):
 
 
 def test_fully_hallucinated_citation_demotes_to_insufficient(monkeypatch):
-    # 인용 전부가 풀에 없는 id 인 단정 판정 → 근거 없는 단정으로 보고 강등
+    # 인용 전부가 풀에 없는 id 인 단정 판정은 근거 없는 단정으로 보고 강등한다
     _patch(monkeypatch, [
         Verdict(claim_id=0, label=VerdictLabel.FALSE, confidence=0.95,
                 evidence_chain=["ev_fake_1", "ev_fake_2"]),
@@ -54,7 +54,7 @@ def test_fully_hallucinated_citation_demotes_to_insufficient(monkeypatch):
 
 
 def test_evidence_free_polar_verdict_confidence_capped(monkeypatch):
-    # 상식 예외 경로(인용 없음)의 단정 판정은 코퍼스로 검증 불가 → 상한 0.85
+    # 상식 예외 경로(인용 없음)의 단정 판정은 코퍼스로 검증 불가하므로 상한 0.85
     _patch(monkeypatch, [
         Verdict(claim_id=0, label=VerdictLabel.TRUE, confidence=0.99,
                 evidence_chain=[]),
@@ -79,10 +79,27 @@ def test_cited_polar_verdict_keeps_confidence(monkeypatch):
 
 
 def test_claim_level_mixed_label_demoted(monkeypatch):
-    # "혼재"는 종합 등급 전용 — 주장 단위로 나오면 불충분으로 강등
+    # "혼재"는 종합 등급 전용이라 주장 단위로 나오면 불충분으로 강등하고
+    # 다른 강등 경로와 동일하게 신뢰도 상한 0.5 를 적용한다
     _patch(monkeypatch, [
-        Verdict(claim_id=0, label=VerdictLabel.MIXED, confidence=0.7,
+        Verdict(claim_id=0, label=VerdictLabel.MIXED, confidence=0.95,
                 evidence_chain=[]),
     ])
     update = judge_mod.judge(_state())
-    assert update["verdicts"][0].label == VerdictLabel.INSUFFICIENT
+    v = update["verdicts"][0]
+    assert v.label == VerdictLabel.INSUFFICIENT
+    assert v.confidence <= 0.5
+
+
+def test_cross_claim_citation_treated_as_hallucinated(monkeypatch):
+    # 다른 주장에 귀속된 스니펫 id 인용은 환각으로 취급해 가드 우회를 막는다.
+    # (풀의 ev_real 은 claim 0 귀속인데 claim 1 판정이 인용)
+    _patch(monkeypatch, [
+        Verdict(claim_id=1, label=VerdictLabel.FALSE, confidence=0.95,
+                evidence_chain=["ev_real"]),
+    ])
+    update = judge_mod.judge(_state())
+    v = update["verdicts"][0]
+    assert v.evidence_chain == []
+    assert v.label == VerdictLabel.INSUFFICIENT
+    assert v.confidence <= 0.5

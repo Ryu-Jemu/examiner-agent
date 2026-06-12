@@ -24,9 +24,11 @@ def run_factcheck_state(
     api_key: str | None = None,
     image_data_url: str | None = None,
 ) -> FactCheckState:
-    """그래프를 실행해 최종 State 를 반환한다. api_key(BYOK)는 invoke 전에 요청
-    범위로 설정해야 병렬 노드 워커로 컨텍스트가 전파된다.
-    image_data_url 은 첨부 이미지(data:image/...;base64,...) — 멀티모달 입력."""
+    """그래프를 실행해 최종 State 를 반환한다.
+
+    api_key(BYOK)는 invoke 전에 요청 범위로 설정해야 병렬 노드 워커로 전파된다.
+    image_data_url 은 첨부 이미지(data:image/...;base64,...) 멀티모달 입력.
+    """
     from .llm import reset_request_api_key, set_request_api_key
 
     settings = get_settings()

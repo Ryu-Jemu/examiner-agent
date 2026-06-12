@@ -9,8 +9,7 @@ def format_evidence_block(items: list[EvidenceItem]) -> str:
     lines = []
     for it in items:
         cred = f"{it.credibility:.2f}"
-        # 매칭도(주장-증거 의미 유사도)와 작성 시점을 노출해 턱걸이 매칭·
-        # 시점 의존 주장을 판사·토론자가 직접 가늠하게 한다.
+        # 매칭도와 작성 시점을 노출해 판사·토론자가 직접 가늠하게 함
         rel = f", 매칭도 {it.relevance:.2f}" if it.relevance is not None else ""
         date = f", 작성시점 {it.date}" if it.date else ""
         lines.append(

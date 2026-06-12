@@ -1,10 +1,10 @@
-"""Rumor Verification Agent — LangGraph 멀티에이전트 패키지."""
+"""Rumor Verification Agent. LangGraph 멀티에이전트 패키지."""
 
 __version__ = "0.1.0"
 
 
 def run_factcheck(*args, **kwargs):
-    # 무거운 의존성을 임포트 시점이 아니라 호출 시점에 로드하는 지연 임포트 래퍼.
+    # 지연 임포트 래퍼.
     from .runner import run_factcheck as _run
 
     return _run(*args, **kwargs)

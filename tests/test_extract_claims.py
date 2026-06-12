@@ -1,4 +1,4 @@
-"""extract_claims — 텍스트/이미지 입력 분기와 claim_id 재정렬."""
+"""extract_claims 텍스트/이미지 입력 분기와 claim_id 재정렬."""
 
 import importlib
 

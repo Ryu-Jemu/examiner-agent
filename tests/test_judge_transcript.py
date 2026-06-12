@@ -1,4 +1,4 @@
-"""judge — 재검색 루프 시 '판사' 시스템 턴이 트랜스크립트에 추가되는지."""
+"""judge: 재검색 루프 시 판사 시스템 턴이 트랜스크립트에 추가되는지 검증."""
 
 from factchecker.models import (
     Claim,
@@ -11,7 +11,7 @@ from factchecker.models import (
 )
 import importlib
 
-# nodes/__init__ 이 동명 함수를 재수출하므로 모듈 객체를 직접 가져온다
+# nodes/__init__ 이 동명 함수를 재수출하므로 모듈 객체를 직접 가져온다.
 judge_mod = importlib.import_module("factchecker.nodes.judge")
 
 

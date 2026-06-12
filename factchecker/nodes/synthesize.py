@@ -30,9 +30,8 @@ _FALSE_SIDE = {VerdictLabel.MOSTLY_FALSE, VerdictLabel.FALSE}
 
 
 def _overall_label(verdicts: list[Verdict]) -> VerdictLabel:
-    """종합 등급. 참·거짓 판정이 엇갈리면 평균(0.5 부근→'불충분')으로 뭉개지
-    않고 '혼재'로 분리한다 — '판단 불가'와 '판정 상충'은 다른 결론이다."""
-    labels = {v.label for v in verdicts}
+    """종합 등급. 참·거짓이 엇갈리면 평균 대신 혼재로 분리, 저신뢰 단정은 신뢰도 문턱으로 배제."""
+    labels = {v.label for v in verdicts if v.confidence >= 0.5}
     if labels & _TRUE_SIDE and labels & _FALSE_SIDE:
         return VerdictLabel.MIXED
     avg_truth = (
@@ -68,17 +67,17 @@ def _fallback_rebuttal(overall: VerdictLabel) -> str:
     if overall in (VerdictLabel.FALSE, VerdictLabel.MOSTLY_FALSE):
         return (
             f"확인 결과 이 내용은 사실과 다르거나 오해의 소지가 큰 것으로 보입니다"
-            f"('{overall.value}'). 공유하시기 전에 공신력 있는 출처를 함께 확인해"
+            f"(「{overall.value}」). 공유하시기 전에 공신력 있는 출처를 함께 확인해"
             " 보시면 좋겠습니다."
         )
     if overall in (VerdictLabel.TRUE, VerdictLabel.MOSTLY_TRUE):
         return (
             f"확인 결과 이 내용은 대체로 사실에 부합하는 것으로 보입니다"
-            f"('{overall.value}'). 다만 출처를 함께 확인하면 더 정확합니다."
+            f"(「{overall.value}」). 다만 출처를 함께 확인하면 더 정확합니다."
         )
     return (
         "현재 확보한 근거만으로는 사실 여부를 단정하기 어렵습니다"
-        f"('{overall.value}'). 공신력 있는 출처를 함께 확인해 보시길 권합니다."
+        f"(「{overall.value}」). 공신력 있는 출처를 함께 확인해 보시길 권합니다."
     )
 
 
@@ -165,7 +164,7 @@ def synthesize(state: FactCheckState) -> dict:
 
     if verdicts:
         overall = _overall_label(verdicts)
-        # 주장별 판정 확신의 평균(종합 등급 자체의 확률이 아님 — UI 표기 참조)
+        # 주장별 판정 확신의 평균(종합 등급 자체의 확률이 아님)
         overall_conf = sum(v.confidence for v in verdicts) / len(verdicts)
     else:
         overall = VerdictLabel.INSUFFICIENT
@@ -173,7 +172,7 @@ def synthesize(state: FactCheckState) -> dict:
 
     report_block = _format_report_block(overall, breakdowns, tags)
 
-    # 반론 카드(LLM) — 실패해도 안전하고 등급에 일관된 기본 문구
+    # 반론 카드(LLM). 실패 시 등급에 일관된 기본 문구로 폴백
     fallback = RebuttalCard(rebuttal_card=_fallback_rebuttal(overall))
     rebuttal = structured_invoke(
         prompts.render("rebuttal", report_block=report_block),
