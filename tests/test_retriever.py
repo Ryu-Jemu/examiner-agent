@@ -1,4 +1,4 @@
-"""evidence_retriever — 양측 스탠스 쿼리, both 승격, 라운드 간 중복 제거."""
+"""evidence_retriever 양측 스탠스 쿼리, both 승격, 라운드 간 중복 제거."""
 
 from factchecker.models import (
     STANCE_BOTH,
@@ -41,7 +41,7 @@ def test_existing_ids_dedup_across_rounds():
     seen: set = set()
     first = retrieve_for_claim("주장", 0, k=3, store=store, existing_ids=seen)
     assert {i.snippet_id for i in first} == {"ev_a", "ev_b"}
-    # 같은 라운드 키 집합을 공유하면 재검색에서 신규 없음 → 종료조건(3) 입력
+    # 같은 라운드 키 집합을 공유하면 재검색에 신규가 없어 종료조건(3) 입력이 된다
     second = retrieve_for_claim("주장", 0, k=3, store=store, existing_ids=seen)
     assert second == []
 
@@ -50,7 +50,7 @@ class _ScoredStore:
     """주제 일치(고점수)·무관(저점수) 스니펫을 함께 돌려주는 스텁.
 
     실측 분포(gemini-embedding-001·cosine): 주제 일치 0.717 이상,
-    무관 0.676 이하 — 기본 임계값 0.70 이 그 사이를 가른다.
+    무관 0.676 이하. 기본 임계값 0.70 이 그 사이를 가른다.
     """
 
     def similarity_search_with_relevance_scores(self, query, k):

@@ -82,19 +82,19 @@ python -m factchecker.rag.ingest --force  # 강제 재빌드
 채점 전 워밍업을 권장합니다. 무료 등급은 미접속 시 서버가 잠들어 첫 접속이 콜드 스타트로 수십 초 걸릴 수 있습니다. 시연 직전에 `curl https://factchecker-nlvz.onrender.com/health`를 한 번 호출해 깨워 두세요.
 
 ```bash
-# 라이브 웹 앱 (FastAPI 백엔드 + 프런트엔드) — 임의 주장을 실시간으로 RAG+LangGraph 검증
-python server.py          # → 브라우저에서 http://127.0.0.1:8000 접속
-#   입력창에 아무 루머나 입력하거나 카톡 캡처 이미지를 드래그 → 실제 에이전트가
-#   증거 수집 · 3턴 토론(대화창 표시) · 판정 · 반론 카드 생성.
+# 라이브 웹 앱 (FastAPI 백엔드 + 프런트엔드). 임의 주장을 실시간으로 RAG+LangGraph 검증
+python server.py          # 브라우저에서 http://127.0.0.1:8000 접속
+#   입력창에 아무 루머나 입력하거나 카톡 캡처 이미지를 드래그하면 실제 에이전트가
+#   증거 수집, 3턴 토론(대화창 표시), 판정, 반론 카드 생성을 수행합니다.
 #   API 키는 서버 측 .env 에서만 사용(HTML/브라우저로 전달되지 않음).
 ```
 
 ```bash
-# 단위 테스트 (LLM/네트워크 불필요 — 라우팅·환각 필터·토론 턴·스탠스 태깅 검증)
+# 단위 테스트 (LLM/네트워크 불필요. 라우팅·환각 필터·토론 턴·스탠스 태깅 검증)
 pytest tests/
 ```
 
-코드에서 직접 호출하려면:
+코드에서 직접 호출하려면 다음과 같이 합니다.
 ```python
 from factchecker.runner import run_factcheck
 report = run_factcheck("충격! 백신 맞으면 자석이 붙는대요. 빨리 공유하세요!")
@@ -102,10 +102,7 @@ print(report.overall_grade, report.overall_confidence)
 print(report.rebuttal_card)
 ```
 
-> **외부 배포:** 채점자·외부 사용자가 접속하도록 서버를 공개하려면 **[DEPLOY.md](DEPLOY.md)**
-> 참고(단일 서버 / Docker / Render Blueprint / 임시 터널 단계별, 키 비노출·HTTPS·헬스체크 포함).
-> Render 상시 배포는 **BYOK**(`ALLOW_USER_KEY=true`) — 서버에 채팅 LLM 키를 두지 않고 사용자가
-> 화면에서 자기 키를 입력하므로 소유자 키로 비용이 발생하지 않습니다(`render.yaml` 포함).
+외부 배포: 채점자·외부 사용자가 접속하도록 서버를 공개하려면 [DEPLOY.md](DEPLOY.md)를 참고하세요(단일 서버 / Docker / Render Blueprint / 임시 터널 단계별, 키 비노출·HTTPS·헬스체크 포함). Render 상시 배포는 BYOK(`ALLOW_USER_KEY=true`)로, 서버에 채팅 LLM 키를 두지 않고 사용자가 화면에서 자기 키를 입력하므로 소유자 키로 비용이 발생하지 않습니다(`render.yaml` 포함).
 
 ---
 
@@ -116,15 +113,15 @@ print(report.rebuttal_card)
 
 | 변수 | 기본값 | 설명 |
 |---|---|---|
-| `LLM_API_KEY` | `YOUR-API-KEY-HERE` | **필수**(BYOK 시 생략 가능). 채팅용 외부 LLM API 키 |
-| `LLM_MODEL` | (빈값) | **필수.** 사용할 LLM 모델 ID(제공받은 값 입력) |
+| `LLM_API_KEY` | `YOUR-API-KEY-HERE` | 필수(BYOK 시 생략 가능). 채팅용 외부 LLM API 키 |
+| `LLM_MODEL` | (빈값) | 필수. 사용할 LLM 모델 ID(제공받은 값 입력) |
 | `LLM_MAX_TOKENS` | `4096` | LLM 응답 최대 토큰 |
-| `ALLOW_USER_KEY` | `false` | BYOK 모드 — 사용자가 요청마다 키 입력(서버 키 불필요) |
-| `GOOGLE_API_KEY` | `YOUR-API-KEY-HERE` | **필수.** 임베딩(Gemini)용 키 |
+| `ALLOW_USER_KEY` | `false` | BYOK 모드. 사용자가 요청마다 키 입력(서버 키 불필요) |
+| `GOOGLE_API_KEY` | `YOUR-API-KEY-HERE` | 필수. 임베딩(Gemini)용 키 |
 | `GEMINI_EMBEDDING_MODEL` | `models/gemini-embedding-001` | Gemini 임베딩 모델 |
 | `MAX_LOOPS` | `2` | 판사→검색 최대 루프 |
 | `RETRIEVE_K` | `3` | 주장당 회수 스니펫 수(작을수록 토큰 절약) |
-| `RETRIEVE_MIN_RELEVANCE` | `0.70` | 코사인 관련성 임계값(미만 스니펫 제외). 번들 코퍼스 실측 보정값 — 임베딩 모델 교체 시 재보정 필요 |
+| `RETRIEVE_MIN_RELEVANCE` | `0.70` | 코사인 관련성 임계값(미만 스니펫 제외). 번들 코퍼스 실측 보정값으로, 임베딩 모델 교체 시 재보정 필요 |
 | `CONFIDENCE_DELTA_THRESHOLD` | `0.05` | 신뢰도 수렴 종료 임계값 |
 | `MAX_CLAIMS` | `2` | 한 입력에서 검증할 최대 주장 수(비용 상한) |
 | `LLM_THROTTLE_SECONDS` | `0` | LLM 호출 간 최소 간격(초). 레이트리밋 잦으면 4~6 |
@@ -149,23 +146,23 @@ factchecker/            # 백엔드 패키지 (저장소 루트, flat layout)
   nodes/                # 6개 노드 + 라우팅 (3턴 토론·트랜스크립트 포함)
   graph.py runner.py    # 그래프 조립 / 실행 API
 data/                   # 증거 코퍼스(corpus.json) · 기법 라이브러리(techniques.json)
-tests/                  # 단위 테스트(pytest) — 라우팅·필터·토론·검색 스텁
-server.py               # ★ FastAPI 라이브 웹앱 진입점(python server.py)
-web/index.html          # ★ 프런트엔드(파이프라인 시각화 + 예시 칩, BYOK 키 입력)
+tests/                  # 단위 테스트(pytest). 라우팅·필터·토론·검색 스텁
+server.py               # FastAPI 라이브 웹앱 진입점(python server.py)
+web/index.html          # 프런트엔드(파이프라인 시각화 + 예시 칩, BYOK 키 입력)
 render.yaml Dockerfile  # 배포(Render Blueprint / 컨테이너)
 ```
 
 ## 7. 범위 / 한계
 
-- **포함(MVP+핵심)**: 주장 추출(텍스트·이미지) · 양측 전속 리서처 RAG(스탠스 검색) · 검사⇄변호 3턴 적대 토론 + 토론 전문 대화창 · 자가 반박 루프(재검색 가시화) · 조작 기법 태깅(4종) · 보정 신뢰도 + 근거 사슬 · 반론 카드 · 단위 테스트(pytest) · 라이브 웹앱(FastAPI).
-- **제외**: 라이브 웹 검색 · AI 생성 콘텐츠 탐지(딥페이크 판별) · 루머 계보 추적 · (스트레치) 검증 메모리.
-- 번들 코퍼스(증거 32 스니펫 · 기법 4종)는 데모/시연용 소형 지식베이스입니다(`data/evidence_corpus/SOURCES.md` 참고). 코퍼스 밖 주제는 "관련 증거 0건 → 불충분(판단 불가)"이 의도된 동작이며, 일반 상식으로 판정 가능한 주장만 예외적으로 상식 기반 판정(신뢰도 상한 적용)을 받습니다.
-- **증거 최신성**: 번들 코퍼스는 시점 고정 스냅숏이라 최신 날짜 기준 검색·재랭킹은 적용 대상이 아닙니다(라이브 소스를 도입할 때만 의미가 있음). 대신 증거의 작성시점을 판정 프롬프트와 결과에 노출하고, "현재·최근" 같은 시점 의존 주장은 판사가 기준 시점의 한계를 신뢰도에 반영하도록 했습니다.
+- 포함(MVP+핵심): 주장 추출(텍스트·이미지), 양측 전속 리서처 RAG(스탠스 검색), 검사·변호 3턴 적대 토론과 토론 전문 대화창, 자가 반박 루프(재검색 가시화), 조작 기법 태깅(4종), 보정 신뢰도와 근거 사슬, 반론 카드, 단위 테스트(pytest), 라이브 웹앱(FastAPI).
+- 제외: 라이브 웹 검색, AI 생성 콘텐츠 탐지(딥페이크 판별), 루머 계보 추적, (스트레치) 검증 메모리.
+- 번들 코퍼스(증거 32 스니펫, 기법 4종)는 데모·시연용 소형 지식베이스입니다(`data/evidence_corpus/SOURCES.md` 참고). 코퍼스 밖 주제는 관련 증거 0건이면 불충분(판단 불가)으로 처리하는 것이 의도된 동작이며, 일반 상식으로 판정 가능한 주장만 예외적으로 상식 기반 판정(신뢰도 상한 적용)을 받습니다.
+- 증거 최신성: 번들 코퍼스는 시점 고정 스냅숏이라 최신 날짜 기준 검색·재랭킹은 적용 대상이 아닙니다(라이브 소스를 도입할 때만 의미가 있음). 대신 증거의 작성시점을 판정 프롬프트와 결과에 노출하고, 「현재·최근」 같은 시점 의존 주장은 판사가 기준 시점의 한계를 신뢰도에 반영하도록 했습니다.
 
-## 8. 제출(submission) 시 주의 — API 키 유출 방지
+## 8. 제출(submission) 시 주의: API 키 유출 방지
 
-`.gitignore` 는 **git 커밋**에서만 `.env` 를 제외합니다. 폴더를 통째로 zip 으로 제출하면
-`.gitignore` 가 적용되지 않아 `.env` 의 실제 키가 함께 유출될 수 있습니다. 제출 전에:
+`.gitignore`는 git 커밋에서만 `.env`를 제외합니다. 폴더를 통째로 zip으로 제출하면
+`.gitignore`가 적용되지 않아 `.env`의 실제 키가 함께 유출될 수 있습니다. 제출 전에 다음을 수행하세요.
 
 ```bash
 # .env / 가상환경 / 인덱스 / git 내부 파일을 제외하고 압축

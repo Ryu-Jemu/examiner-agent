@@ -86,7 +86,7 @@ def test_no_evidence_runs_commonsense_debate(monkeypatch):
         prompts_seen.append(prompt)
         return SideArgument(
             summary=f"상식 논거{len(prompts_seen)}",
-            cited_snippet_ids=["ev_fake"],  # 빈 풀 → 사후 필터로 제거돼야 함
+            cited_snippet_ids=["ev_fake"],  # 빈 풀이라 사후 필터로 제거돼야 함
         )
 
     monkeypatch.setattr(deb, "structured_invoke", fake_invoke)

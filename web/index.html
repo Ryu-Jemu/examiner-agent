@@ -337,19 +337,19 @@ async function run(){
   if(requireKey && !apiKey){
     keyRow.classList.remove("hidden"); keyInput.focus();
     resultCard.classList.remove("hidden");
-    resultEl.innerHTML=`<div class="err">🔑 먼저 외부 LLM API 키를 입력하세요. 이 서비스는 사용자가 발급한 키로 동작합니다.</div>`;
+    resultEl.innerHTML=`<div class="err">먼저 외부 LLM API 키를 입력하세요. 이 서비스는 사용자가 발급한 키로 동작합니다.</div>`;
     resultCard.scrollIntoView({behavior:"smooth"}); return;
   }
   busy=true; runBtn.disabled=true;
   pipeCard.classList.remove("hidden"); resultCard.classList.add("hidden");
   const nodes=buildPipe(); const t0=Date.now();
-  // 처리 중 노드 순차 점등(마지막 노드에서 대기) + 경과시간 표시
+  // 노드 순차 점등 + 경과시간 표시
   let i=0, anim=true;
   const tick=()=>{ if(!anim) return;
     nodes.forEach((n,k)=>{ n.classList.toggle("active", k===Math.min(i,nodes.length-1)); if(k<Math.min(i,nodes.length-1)) n.classList.add("done"); });
     i++; setTimeout(tick, 500); };
   tick();
-  const timer=setInterval(()=>{ statusEl.innerHTML=`<span class="spin"></span>실제 에이전트 실행 중… ${((Date.now()-t0)/1000).toFixed(0)}초 경과`; }, 300);
+  const timer=setInterval(()=>{ statusEl.innerHTML=`<span class="spin"></span>실제 에이전트 실행 중 ${((Date.now()-t0)/1000).toFixed(0)}초 경과`; }, 300);
   try{
     const body={text};
     if(apiKey) body.api_key=apiKey;
@@ -361,9 +361,9 @@ async function run(){
     if(!res.ok || data.error){
       statusEl.textContent="";
       resultCard.classList.remove("hidden");
-      resultEl.innerHTML=`<div class="err">⚠️ ${esc(data.error||("오류 ("+res.status+")"))}</div>`;
+      resultEl.innerHTML=`<div class="err">${esc(data.error||("오류 ("+res.status+")"))}</div>`;
     } else {
-      statusEl.innerHTML=`✅ 완료 · ${((Date.now()-t0)/1000).toFixed(0)}초 소요`;
+      statusEl.innerHTML=`완료 · ${((Date.now()-t0)/1000).toFixed(0)}초 소요`;
       resultCard.classList.remove("hidden");
       renderResult(data);
     }
@@ -371,7 +371,7 @@ async function run(){
   }catch(e){
     anim=false; clearInterval(timer); statusEl.textContent="";
     resultCard.classList.remove("hidden");
-    resultEl.innerHTML=`<div class="err">⚠️ 서버에 연결할 수 없습니다. 백엔드(python server.py)가 실행 중인지 확인하세요.\n${esc(String(e))}</div>`;
+    resultEl.innerHTML=`<div class="err">서버에 연결할 수 없습니다. 백엔드(python server.py)가 실행 중인지 확인하세요.\n${esc(String(e))}</div>`;
   }finally{ busy=false; runBtn.disabled=false; }
 }
 runBtn.onclick=run;
